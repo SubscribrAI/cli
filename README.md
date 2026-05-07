@@ -2,7 +2,7 @@
 
 CLI and AI agent skill for the [Subscribr YouTube API](https://subscribr.ai/youtube-api). Built for developers, creators, and AI agents that want to automate YouTube content workflows — research competitors, generate video ideas, write scripts with AI, create thumbnails, and manage webhooks.
 
-Works with [Claude Code](https://claude.ai/claude-code), [OpenAI Codex](https://developers.openai.com/codex/skills/), [Cursor](https://cursor.com/docs/skills), and any agent that supports the [Agent Skills spec](https://agentskills.io).
+Works with [Claude Code](https://claude.ai/claude-code), [OpenAI Codex](https://developers.openai.com/codex/skills/), [Cursor](https://cursor.com/docs/skills), [OpenClaw](https://openclaw.ai), and any agent that supports the [Agent Skills spec](https://agentskills.io).
 
 New to Subscribr? [See what the API can do](https://subscribr.ai/youtube-api) or check out the [full API reference](https://subscribr.ai/youtube-api/reference).
 
@@ -17,7 +17,7 @@ New to Subscribr? [See what the API can do](https://subscribr.ai/youtube-api) or
 
 A skill is a markdown file that gives AI coding agents specialized knowledge. When you install the Subscribr skill, your agent learns how to authenticate, call endpoints, handle async polling, and chain together workflows like "research a niche and write a script" — without you spelling out every API call.
 
-The skill follows the [Agent Skills spec](https://agentskills.io/specification) and is compatible with Claude Code, Codex, Cursor, and other agents.
+The skill follows the [Agent Skills spec](https://agentskills.io/specification) and is compatible with Claude Code, Codex, Cursor, OpenClaw, and other agents.
 
 ## Installation
 
@@ -27,7 +27,7 @@ The skill follows the [Agent Skills spec](https://agentskills.io/specification) 
 npx @giltotherescue/subscribr-cli
 ```
 
-Installs the skill into both `.agents/skills/` (Codex, Cursor) and `.claude/skills/` (Claude Code).
+Installs the skill into both `.agents/skills/` (Codex, Cursor, OpenClaw) and `.claude/skills/` (Claude Code).
 
 To also install the Python CLI:
 
@@ -53,7 +53,7 @@ curl -sL https://raw.githubusercontent.com/giltotherescue/subscribr-cli/main/ski
 
 ```bash
 git clone https://github.com/giltotherescue/subscribr-cli.git
-cp -r subscribr-cli/skills/subscribr-api .agents/skills/
+cp -r subscribr-cli/skills/subscribr-api .agents/skills/  # Codex, Cursor, OpenClaw
 cp -r subscribr-cli/skills/subscribr-api .claude/skills/  # Claude Code
 ```
 
