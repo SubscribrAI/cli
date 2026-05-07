@@ -16,7 +16,7 @@ function copyFile(src, dest, label) {
   console.log(`  \u2713 ${label} \u2192 ${path.relative(process.cwd(), dest)}`);
 }
 
-console.log("\n  @subscribr/cli\n");
+console.log("\n  @giltotherescue/subscribr-cli\n");
 
 // Install to .agents/skills/ (Codex, Cursor, Agent Skills spec)
 copyFile(SKILL_SRC, path.join(AGENTS_DIR, "SKILL.md"), "Skill (.agents/skills/)");
@@ -42,7 +42,7 @@ if (withCli) {
   console.log("  python3 subscribr.py scripts create --channel_id 42 --title '...'\n");
 } else {
   console.log("  To also install the Python CLI:");
-  console.log("  npx @subscribr/cli --with-cli\n");
+  console.log("  npx @giltotherescue/subscribr-cli --with-cli\n");
 }
 
 console.log("  Docs: https://subscribr.ai/youtube-api");

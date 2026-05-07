@@ -24,7 +24,7 @@ The skill follows the [Agent Skills spec](https://agentskills.io/specification) 
 ### Option 1: npx (Recommended)
 
 ```bash
-npx @subscribr/cli
+npx @giltotherescue/subscribr-cli
 ```
 
 Installs the skill into both `.agents/skills/` (Codex, Cursor) and `.claude/skills/` (Claude Code).
@@ -32,7 +32,7 @@ Installs the skill into both `.agents/skills/` (Codex, Cursor) and `.claude/skil
 To also install the Python CLI:
 
 ```bash
-npx @subscribr/cli --with-cli
+npx @giltotherescue/subscribr-cli --with-cli
 ```
 
 ### Option 2: curl

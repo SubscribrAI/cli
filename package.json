@@ -1,6 +1,6 @@
 {
-  "name": "@subscribr/cli",
-  "version": "1.0.0",
+  "name": "@giltotherescue/subscribr-cli",
+  "version": "1.0.1",
   "description": "CLI and AI agent skill for the Subscribr YouTube API",
   "bin": {
     "subscribr-cli": "bin/install.js"
