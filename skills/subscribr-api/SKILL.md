@@ -1,255 +1,60 @@
 ---
 name: subscribr-api
-description: "Use Subscribr's REST API and CLI for YouTube content creation, research, and automation. Covers authentication, all endpoint groups (scripts, channels, Intel, ideas, thumbnails, bookmarks, webhooks), and common workflows. Also documents the MCP server for research-only use in AI chat clients.\n\nTriggers on: Subscribr API calls, YouTube data lookups, Intel search, channel/script/video management via Subscribr, script generation or export, webhook setup, or any request involving subscribr.ai endpoints."
+description: Use Subscribr's REST API, CLI, and MCP server for Projects board management, scripts, ideas, YouTube Intel research, templates, strict voice profiles, notifications, and webhooks. Use when a user asks to automate or inspect Subscribr data.
 ---
 
-# Subscribr REST API — AI Agent Reference
+# Subscribr API
 
-You are helping a developer or creator who uses **Subscribr**, a YouTube content creation platform. This skill teaches you how to authenticate, call API endpoints, and build workflows on their behalf.
+Use the canonical operation list in [references/endpoints.md](references/endpoints.md). Never invent a route from a noun in the product UI.
 
-## Quick Reference
+## Connection
 
-| Property | Value |
-|---|---|
-| **Base URL** | `https://subscribr.ai` |
-| **API Prefix** | `/api/v1/` |
-| **Auth** | Bearer token (Personal Access Token or OAuth 2.1) |
-| **Rate Limit** | 120 requests/minute |
-| **Full API Reference** | `https://subscribr.ai/api/docs/reference/ai` (plain text, LLM-optimized) |
-| **Plan Required** | Automation or higher for REST API |
+- Base URL: `https://subscribr.com`
+- REST prefix: `/api/v1`
+- OpenAPI: `https://subscribr.com/openapi.json`
+- Authentication: `Authorization: Bearer <token>`
+- Create a Team-bound token in Subscribr Developer Settings. A token cannot switch Teams after creation.
 
-## Before You Start
+Start with `getTeam` and `listChannels` when Team or Channel context is unknown. Treat `403` as a permission, entitlement, or Team-binding failure; do not retry it as a transient error.
 
-**Always fetch the full API reference first.** The plain-text docs at the URL above contain every endpoint, parameter, response shape, and error code. Use `WebFetch` or `curl` to retrieve it:
+## Safe writes
 
-```
-curl -s https://subscribr.ai/api/docs/reference/ai
-```
+- Send a unique `Idempotency-Key` on every operation marked `idempotency=required`.
+- Send the exact strong `ETag` as `If-Match` when concurrency is required.
+- On a timeout, retry the identical request with the same idempotency key. Never change the body under an existing key.
+- A `409 revision_conflict` means reload the resource and ask before applying the change again.
+- Project archive, promotion, idea generation, and voice commits may use preview/commit receipts. Show the effect preview and stop for explicit user approval before commit.
 
-This skill provides orientation and common patterns. The full reference is the source of truth for endpoint details.
+## Projects board
 
-## Authentication
+Use `listProjects` for the board and `getProject` for one card. Project IDs are versioned typed strings such as `project:v1:idea:42` and `project:v1:script:93`; preserve the complete value. Use `expected_revision`/`If-Match` and idempotency when creating, editing, moving, promoting, archiving, restoring, commenting, or changing production metadata.
 
-All API requests require a bearer token in the `Authorization` header:
+The external stages are the existing Kanban stages. Do not manufacture a different workflow. A disabled occupied Recording column can be read and moved out of, but cannot receive new cards unless enabled for the Channel.
 
-```
-Authorization: Bearer <token>
-```
+## Templates and voices
 
-**How to get a token:**
-1. Go to https://subscribr.ai/developer
-2. Click "Create Token" in the Access Tokens tab
-3. Copy the token — it's shown once
+Built-in templates are stable descriptors and are never created by a list call. Only custom templates can be created, updated, archived, or restored.
 
-**Plan requirements:**
-- REST API access requires **Automation or Scale** plan
-- MCP server access requires **Creator, Automation, or Scale** plan
-- Intel endpoints (search channels/videos, lookups) require **Creator or higher**
-- Write actions require **editor access or higher** on the team
+Voice writes are deliberately strict:
 
-## Subscribr CLI
+1. Call `validateVoiceProfile` with the complete Voice Profile v2 document.
+2. Present its normalized profile, diff, warnings, checksum, target ID, and expiry.
+3. After explicit approval, call `commitVoiceProfile` with the unchanged normalized profile and receipt. Include `If-Match` for updates.
 
-This repo includes `subscribr.py`, a zero-dependency Python CLI that wraps every API endpoint. If it's available in the project, prefer using it over raw `curl` — it handles auth, path params, JSON parsing, and polling automatically.
+Legacy voice profiles remain readable but are not writable until a complete v2 profile validates. Do not remove unknown fields or fill missing fields heuristically; validation is fail-closed.
 
-```bash
-# Set your token
-export SUBSCRIBR_API_TOKEN=sk_live_...
+## YouTube research and Subscribr Video
 
-# List domains and actions
-subscribr help
-subscribr scripts help
+Keep using the Intel video lookup/search operations for open-world YouTube research and tracked-channel MCP research tools. The generic `getOperation` route may poll an operation ID already returned by a public API operation, but it does not publish a Video capability. Subscribr Video is Subscribr's video-production surface. Do not invent Video REST or CLI commands until the canonical public `/api/v1/video/...` operation metadata ships; that future slice must add capability discovery, channel setup, quotes, renders, artifacts, cancellation, and revisions together.
 
-# Call any endpoint
-subscribr channels list
-subscribr scripts create --channel_id 42 --title "My Video" --topic "..." --length 1500
-subscribr intel lookup-channels --body '{"identifiers": ["@mkbhd"]}'
-```
+## MCP
 
-Path parameters (shown as `{name}` in routes) are passed via `--name value`. Extra `--key value` args become query params (GET) or JSON body fields (POST). Use `--body '...'` for complex JSON payloads.
+Use `https://subscribr.com/mcp/subscribr/v2` for new ChatGPT, Claude, and other MCP connections. It exposes the compact semantic catalog and interactive Projects board. The original `https://subscribr.com/mcp/subscribr` endpoint remains a 16-tool compatibility surface for existing integrations; do not use it when a workflow requires Projects, Tasks, notifications, templates, or strict Voice Profile management.
 
-## REST API Endpoints
+Prefer MCP inside conversational hosts and REST/CLI for deterministic automation. Tools and embedded Apps still enforce the same Team, Channel, role, revision, idempotency, and confirmation rules as REST.
 
-The REST API covers the **complete Subscribr platform** — research, content creation, automation, and infrastructure.
+When an MCP host cannot render Apps, use the structured/text tool fallback. Never treat widget visibility or hidden App fields as authorization.
 
-### Endpoint Groups
+## Errors
 
-- **Team** — `/api/v1/team` — Account info, credits, plan status
-- **Channels** — `/api/v1/channels` — List/get channels, templates, voice profiles, competitors
-- **Scripts** — `/api/v1/scripts` — Full script lifecycle: create, outline, generate, humanize, export
-- **Ideas** — `/api/v1/channels/{id}/ideas` — Create, batch generate, generate from video/channel references
-- **Intel Search** — `/api/v1/intel/channels/search`, `/api/v1/intel/videos/search` — AI-powered YouTube research
-- **Intel Lookups** — `/api/v1/intel/channels/lookup`, `/api/v1/intel/videos/lookup` — Look up YouTube channels or videos
-- **Bookmarks** — `/api/v1/intel/bookmarks` — Saved channels and videos
-- **Thumbnails** — `/api/v1/channels/{id}/thumbnails` — AI thumbnail generation (brainstorm, clone, improve)
-- **Webhooks** — `/api/v1/webhooks` — Full CRUD for webhook endpoints and real-time event notifications
-
-## Common Workflows
-
-### Write a script
-
-```bash
-# 1. Create script
-subscribr scripts create --channel_id 42 --title "Title" --topic "Topic here" --length 1500
-# → returns script_id
-
-# 2. Generate outline (async)
-subscribr scripts generate-outline --script_id 123
-# → returns run_id
-
-# 3. Poll until complete
-subscribr scripts poll --script_id 123 --run_id abc123
-
-# 4. Generate full script (requires outline)
-subscribr scripts generate --script_id 123
-# → returns new run_id — poll again
-
-# 5. Optional: humanize the script
-subscribr scripts humanize --script_id 123
-# → returns run_id — poll again
-
-# 6. Export
-subscribr scripts export --script_id 123 --format markdown
-```
-
-### Research a niche
-
-```bash
-# Search for channels by topic
-subscribr intel search-channels --body '{"query": "personal finance", "limit": 20}'
-
-# Find outlier videos
-subscribr intel search-videos --body '{"query": "how to invest in index funds", "limit": 10}'
-
-# Look up specific channels
-subscribr intel lookup-channels --body '{"identifiers": ["@mkbhd", "@linustechtips"]}'
-
-# Save interesting finds
-subscribr bookmarks add --type channel --external_id UCBcRF18a7Qf58cCRy5xuWwQ --title "MKBHD"
-```
-
-### Generate video ideas
-
-```bash
-# List channels to get IDs
-subscribr channels list
-
-# Generate AI-powered ideas
-subscribr ideas generate --channel_id 42
-
-# Generate ideas from a competitor video
-subscribr ideas generate-from-video --channel_id 42 --video_url https://youtube.com/watch?v=VIDEO_ID
-
-# Convert an idea to a script
-subscribr ideas to-script --idea_id 789
-```
-
-### Generate thumbnails
-
-```bash
-# Check remaining quota
-subscribr thumbnails usage
-
-# Brainstorm concept sketches
-subscribr thumbnails create --channel_id 42 --prompt "How I Made $1M on YouTube" --topic "Revenue breakdown" --num_variations 4
-# → returns run_id
-
-# Poll until complete
-subscribr thumbnails get --channel_id 42 --run_id RUN_ID
-# → when completed: output_urls[]
-
-# Clone a thumbnail style from a reference
-subscribr thumbnails create --channel_id 42 --prompt "My Video Title" --clone_strategy style_analysis --reference_image_url "https://..."
-```
-
-### Set up webhooks
-
-```bash
-# Create a webhook
-subscribr webhooks create --body '{"url": "https://example.com/webhook", "events": ["script.generated", "idea.created"]}'
-
-# Test it
-subscribr webhooks test --webhook_id WEBHOOK_ID
-
-# List existing webhooks
-subscribr webhooks list
-```
-
-## MCP Server (Research & Ideation)
-
-Subscribr also offers an **MCP server** for use inside AI chat clients like Claude, ChatGPT, and Cursor. The MCP server is a **subset** of the REST API — it supports research, ideation, and reviewing content, but **not** content creation or generation.
-
-**MCP Server URL:** `https://subscribr.ai/mcp/subscribr`
-**Plan Required:** Creator, Automation, or Scale
-
-### What MCP Can Do
-- Read your channels, scripts, videos, ideas, and bookmarks
-- Search Intel for YouTube channels and outlier videos
-- Look up any YouTube channel or video
-- Save bookmarks and generate video ideas
-
-### What MCP Cannot Do (Use the REST API Instead)
-- Create or generate scripts (outlines, full scripts)
-- Export scripts to any format
-- Generate thumbnails
-- Manage competitors or templates
-- Create or manage webhooks
-
-### MCP Tools Reference
-
-| Tool | What It Does |
-|------|-------------|
-| `my_team` | Team info, plan, credits |
-| `my_channels` | List your channels |
-| `get_my_channel` | Details for a specific channel |
-| `my_scripts` | List scripts (filterable, searchable) |
-| `get_my_script` | Full script content by ID |
-| `my_videos` | Videos from linked YouTube channels |
-| `get_my_video` | Video details + optional transcript |
-| `get_my_channel_ideas` | Ideas for a channel (filterable by status) |
-| `my_bookmarks` | Saved bookmarks (filterable by type) |
-| `intel_search_channels` | Search 100K+ YouTube channels |
-| `intel_search_videos` | Find outlier videos by topic |
-| `get_youtube_channel` | Look up a channel by handle/URL/ID |
-| `get_youtube_video` | Look up a video by URL/ID |
-| `add_bookmark` | Save a channel or video |
-| `generate_ideas` | Generate AI video ideas |
-
-### MCP Setup for CLI Agents
-
-```json
-{
-  "mcpServers": {
-    "subscribr": {
-      "url": "https://subscribr.ai/mcp/subscribr",
-      "headers": {
-        "Authorization": "Bearer YOUR_TOKEN_HERE"
-      }
-    }
-  }
-}
-```
-
-## Error Handling
-
-- **401 Unauthorized** — Token is missing, expired, or invalid. Create a new one at https://subscribr.ai/developer
-- **403 Forbidden** — Feature requires a higher plan or editor+ role
-- **404 Not Found** — Resource doesn't exist or belongs to a different team
-- **422 Unprocessable** — Validation error. Check the `errors` object in the response
-- **429 Too Many Requests** — Rate limit exceeded (120/min). Back off and retry
-
-## Important Notes
-
-- All data is scoped to the authenticated user's team. You cannot access other teams' data.
-- Write actions require **editor access or higher** on the team.
-- Intel tools require a **Creator or higher** plan.
-- When in doubt, call `subscribr team get` or the `my_team` MCP tool first to check the user's plan and permissions.
-
-## Getting the Full Reference
-
-For complete endpoint documentation with all parameters, response schemas, pagination details, and code examples:
-
-```
-curl -s https://subscribr.ai/api/docs/reference/ai
-```
-
-This returns a comprehensive plain-text reference optimized for LLM consumption.
+Customer API errors use one envelope with `error.code`, `error.message`, `error.retryable`, and optional bounded field errors/current revision/retry delay. Log correlation IDs, not tokens, receipts, profiles, prompts, or signed URLs.

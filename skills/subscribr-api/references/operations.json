@@ -1,0 +1,944 @@
+{
+  "_generated": "DO NOT EDIT: generated from openapi/subscribr-v1.json",
+  "base_url": "https://subscribr.com",
+  "contract_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "operations": {
+    "channels.add-channel-competitor": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "addChannelCompetitor",
+      "path": "/api/v1/channels/{channel}/competitors",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "channels.delete-channel-competitor": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "DELETE",
+      "operation_id": "deleteChannelCompetitor",
+      "path": "/api/v1/channels/{channel}/competitors/{competitor}",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "channels.get-channel": {
+      "abilities": [
+        "channels:read"
+      ],
+      "method": "GET",
+      "operation_id": "getChannel",
+      "path": "/api/v1/channels/{channel}",
+      "write_safety": null
+    },
+    "channels.list-channel-competitors": {
+      "abilities": [
+        "channels:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannelCompetitors",
+      "path": "/api/v1/channels/{channel}/competitors",
+      "write_safety": null
+    },
+    "channels.list-channels": {
+      "abilities": [
+        "channels:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannels",
+      "path": "/api/v1/channels",
+      "write_safety": null
+    },
+    "ideas.change-idea-topic": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "changeIdeaTopic",
+      "path": "/api/v1/ideas/{idea}/change-topic",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "ideas.create-channel-idea": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "createChannelIdea",
+      "path": "/api/v1/channels/{channel}/ideas",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "ideas.generate-channel-ideas": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "generateChannelIdeas",
+      "path": "/api/v1/channels/{channel}/ideas/generate",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "ideas.generate-ideas-from-channel": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "generateIdeasFromChannel",
+      "path": "/api/v1/channels/{channel}/ideas/generate-from-channel",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "ideas.generate-ideas-from-video": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "generateIdeasFromVideo",
+      "path": "/api/v1/channels/{channel}/ideas/generate-from-video",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "ideas.get-idea": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "getIdea",
+      "path": "/api/v1/ideas/{idea}",
+      "write_safety": null
+    },
+    "ideas.list-channel-ideas": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannelIdeas",
+      "path": "/api/v1/channels/{channel}/ideas",
+      "write_safety": null
+    },
+    "ideas.write-idea": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "writeIdea",
+      "path": "/api/v1/ideas/{idea}/write",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.create-intel-bookmark": {
+      "abilities": [
+        "intel:write"
+      ],
+      "method": "POST",
+      "operation_id": "createIntelBookmark",
+      "path": "/api/v1/intel/bookmarks",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.delete-intel-bookmark": {
+      "abilities": [
+        "intel:write"
+      ],
+      "method": "DELETE",
+      "operation_id": "deleteIntelBookmark",
+      "path": "/api/v1/intel/bookmarks/{bookmark}",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.list-intel-bookmarks": {
+      "abilities": [
+        "intel:read"
+      ],
+      "method": "GET",
+      "operation_id": "listIntelBookmarks",
+      "path": "/api/v1/intel/bookmarks",
+      "write_safety": null
+    },
+    "intel.lookup-intel-channel": {
+      "abilities": [
+        "intel:read"
+      ],
+      "method": "POST",
+      "operation_id": "lookupIntelChannel",
+      "path": "/api/v1/intel/channels/lookup",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.lookup-intel-video": {
+      "abilities": [
+        "intel:read"
+      ],
+      "method": "POST",
+      "operation_id": "lookupIntelVideo",
+      "path": "/api/v1/intel/videos/lookup",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.search-intel-channels": {
+      "abilities": [
+        "intel:read"
+      ],
+      "method": "POST",
+      "operation_id": "searchIntelChannels",
+      "path": "/api/v1/intel/channels/search",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "intel.search-intel-videos": {
+      "abilities": [
+        "intel:read"
+      ],
+      "method": "POST",
+      "operation_id": "searchIntelVideos",
+      "path": "/api/v1/intel/videos/search",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "operations.get-operation": {
+      "abilities": [
+        "operations:read"
+      ],
+      "method": "GET",
+      "operation_id": "getOperation",
+      "path": "/api/v1/operations/{operation}",
+      "write_safety": null
+    },
+    "projects.archive-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "archiveProject",
+      "path": "/api/v1/projects/{project}/archive",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "projects.create-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "createProject",
+      "path": "/api/v1/projects",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "optional",
+        "retry": "same-key"
+      }
+    },
+    "projects.create-project-comment": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "createProjectComment",
+      "path": "/api/v1/projects/{project}/comments",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "optional",
+        "retry": "same-key"
+      }
+    },
+    "projects.get-project": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "getProject",
+      "path": "/api/v1/projects/{project}",
+      "write_safety": null
+    },
+    "projects.get-project-production": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "getProjectProduction",
+      "path": "/api/v1/projects/{project}/production",
+      "write_safety": null
+    },
+    "projects.list-project-activity": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjectActivity",
+      "path": "/api/v1/projects/{project}/activity",
+      "write_safety": null
+    },
+    "projects.list-project-attachments": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjectAttachments",
+      "path": "/api/v1/projects/{project}/attachments",
+      "write_safety": null
+    },
+    "projects.list-project-comments": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjectComments",
+      "path": "/api/v1/projects/{project}/comments",
+      "write_safety": null
+    },
+    "projects.list-project-notifications": {
+      "abilities": [
+        "notifications:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjectNotifications",
+      "path": "/api/v1/project-notifications",
+      "write_safety": null
+    },
+    "projects.list-project-tasks": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjectTasks",
+      "path": "/api/v1/tasks",
+      "write_safety": null
+    },
+    "projects.list-projects": {
+      "abilities": [
+        "projects:read"
+      ],
+      "method": "GET",
+      "operation_id": "listProjects",
+      "path": "/api/v1/projects",
+      "write_safety": null
+    },
+    "projects.move-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "moveProject",
+      "path": "/api/v1/projects/{project}/move",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "projects.promote-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "promoteProject",
+      "path": "/api/v1/projects/{project}/promote",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "projects.read-all-project-notifications": {
+      "abilities": [
+        "notifications:write"
+      ],
+      "method": "POST",
+      "operation_id": "readAllProjectNotifications",
+      "path": "/api/v1/project-notifications/read-all",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "optional",
+        "retry": "same-key"
+      }
+    },
+    "projects.read-project-notification": {
+      "abilities": [
+        "notifications:write"
+      ],
+      "method": "POST",
+      "operation_id": "readProjectNotification",
+      "path": "/api/v1/project-notifications/{notification}/read",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "optional",
+        "retry": "same-key"
+      }
+    },
+    "projects.restore-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "POST",
+      "operation_id": "restoreProject",
+      "path": "/api/v1/projects/{project}/restore",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "projects.update-project": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "PATCH",
+      "operation_id": "updateProject",
+      "path": "/api/v1/projects/{project}",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "projects.update-project-production": {
+      "abilities": [
+        "projects:write"
+      ],
+      "method": "PATCH",
+      "operation_id": "updateProjectProduction",
+      "path": "/api/v1/projects/{project}/production",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "scripts.cancel-script-agent-run": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "cancelScriptAgentRun",
+      "path": "/api/v1/scripts/{script}/agent/runs/{run}/cancel",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "scripts.create-channel-script": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "createChannelScript",
+      "path": "/api/v1/channels/{channel}/scripts",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "scripts.export-script": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "exportScript",
+      "path": "/api/v1/scripts/{script}/export",
+      "write_safety": null
+    },
+    "scripts.generate-script": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "generateScript",
+      "path": "/api/v1/scripts/{script}/script/generate",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "scripts.generate-script-outline": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "generateScriptOutline",
+      "path": "/api/v1/scripts/{script}/outline/generate",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "scripts.get-script": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "getScript",
+      "path": "/api/v1/scripts/{script}",
+      "write_safety": null
+    },
+    "scripts.get-script-agent-run": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "getScriptAgentRun",
+      "path": "/api/v1/scripts/{script}/agent/runs/{run}",
+      "write_safety": null
+    },
+    "scripts.get-script-content": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "getScriptContent",
+      "path": "/api/v1/scripts/{script}/content",
+      "write_safety": null
+    },
+    "scripts.humanize-script": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "humanizeScript",
+      "path": "/api/v1/scripts/{script}/script/humanize",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "scripts.list-channel-scripts": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannelScripts",
+      "path": "/api/v1/channels/{channel}/scripts",
+      "write_safety": null
+    },
+    "scripts.poll-script-generation": {
+      "abilities": [
+        "scripts:read"
+      ],
+      "method": "GET",
+      "operation_id": "pollScriptGeneration",
+      "path": "/api/v1/scripts/{script}/generate/poll",
+      "write_safety": null
+    },
+    "scripts.start-script-agent-run": {
+      "abilities": [
+        "scripts:write"
+      ],
+      "method": "POST",
+      "operation_id": "startScriptAgentRun",
+      "path": "/api/v1/scripts/{script}/agent/generate",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "team.create-api-token": {
+      "abilities": [
+        "tokens:manage"
+      ],
+      "method": "POST",
+      "operation_id": "createApiToken",
+      "path": "/api/v1/team/tokens",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "team.delete-api-token": {
+      "abilities": [
+        "tokens:manage"
+      ],
+      "method": "DELETE",
+      "operation_id": "deleteApiToken",
+      "path": "/api/v1/team/tokens/{token}",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "team.get-team": {
+      "abilities": [],
+      "method": "GET",
+      "operation_id": "getTeam",
+      "path": "/api/v1/team",
+      "write_safety": null
+    },
+    "team.get-team-credits": {
+      "abilities": [],
+      "method": "GET",
+      "operation_id": "getTeamCredits",
+      "path": "/api/v1/team/credits",
+      "write_safety": null
+    },
+    "team.list-api-tokens": {
+      "abilities": [
+        "tokens:manage"
+      ],
+      "method": "GET",
+      "operation_id": "listApiTokens",
+      "path": "/api/v1/team/tokens",
+      "write_safety": null
+    },
+    "templates.archive-template": {
+      "abilities": [
+        "templates:write"
+      ],
+      "method": "POST",
+      "operation_id": "archiveTemplate",
+      "path": "/api/v1/channels/{channel}/templates/{template}/archive",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "templates.create-template": {
+      "abilities": [
+        "templates:write"
+      ],
+      "method": "POST",
+      "operation_id": "createTemplate",
+      "path": "/api/v1/channels/{channel}/templates",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "unsupported",
+        "retry": "same-key"
+      }
+    },
+    "templates.get-template": {
+      "abilities": [
+        "templates:read"
+      ],
+      "method": "GET",
+      "operation_id": "getTemplate",
+      "path": "/api/v1/channels/{channel}/templates/{template}",
+      "write_safety": null
+    },
+    "templates.list-channel-templates": {
+      "abilities": [
+        "templates:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannelTemplates",
+      "path": "/api/v1/channels/{channel}/templates",
+      "write_safety": null
+    },
+    "templates.restore-template": {
+      "abilities": [
+        "templates:write"
+      ],
+      "method": "POST",
+      "operation_id": "restoreTemplate",
+      "path": "/api/v1/channels/{channel}/templates/{template}/restore",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "templates.update-template": {
+      "abilities": [
+        "templates:write"
+      ],
+      "method": "PATCH",
+      "operation_id": "updateTemplate",
+      "path": "/api/v1/channels/{channel}/templates/{template}",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "required",
+        "retry": "same-key"
+      }
+    },
+    "thumbnails.create-thumbnail-generation": {
+      "abilities": [
+        "scripts:write",
+        "thumbnails:write"
+      ],
+      "method": "POST",
+      "operation_id": "createThumbnailGeneration",
+      "path": "/api/v1/channels/{channel}/thumbnails/generations",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "thumbnails.get-thumbnail-generation": {
+      "abilities": [
+        "scripts:read",
+        "thumbnails:read"
+      ],
+      "method": "GET",
+      "operation_id": "getThumbnailGeneration",
+      "path": "/api/v1/channels/{channel}/thumbnails/generations/{runId}",
+      "write_safety": null
+    },
+    "thumbnails.get-thumbnail-usage": {
+      "abilities": [
+        "scripts:read",
+        "thumbnails:read"
+      ],
+      "method": "GET",
+      "operation_id": "getThumbnailUsage",
+      "path": "/api/v1/team/thumbnails/usage",
+      "write_safety": null
+    },
+    "thumbnails.list-thumbnail-generations": {
+      "abilities": [
+        "scripts:read",
+        "thumbnails:read"
+      ],
+      "method": "GET",
+      "operation_id": "listThumbnailGenerations",
+      "path": "/api/v1/channels/{channel}/thumbnails/generations",
+      "write_safety": null
+    },
+    "voices.commit-voice-profile": {
+      "abilities": [
+        "voices:write"
+      ],
+      "method": "POST",
+      "operation_id": "commitVoiceProfile",
+      "path": "/api/v1/channels/{channel}/voices/commit",
+      "write_safety": {
+        "idempotency": "required",
+        "concurrency": "optional",
+        "retry": "same-key"
+      }
+    },
+    "voices.get-voice-profile": {
+      "abilities": [
+        "voices:read"
+      ],
+      "method": "GET",
+      "operation_id": "getVoiceProfile",
+      "path": "/api/v1/channels/{channel}/voices/{voice}",
+      "write_safety": null
+    },
+    "voices.list-channel-voices": {
+      "abilities": [
+        "voices:read"
+      ],
+      "method": "GET",
+      "operation_id": "listChannelVoices",
+      "path": "/api/v1/channels/{channel}/voices",
+      "write_safety": null
+    },
+    "voices.validate-voice-profile": {
+      "abilities": [
+        "voices:write"
+      ],
+      "method": "POST",
+      "operation_id": "validateVoiceProfile",
+      "path": "/api/v1/channels/{channel}/voices/validate",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "revalidate"
+      }
+    },
+    "webhooks.create-webhook": {
+      "abilities": [
+        "webhooks:write"
+      ],
+      "method": "POST",
+      "operation_id": "createWebhook",
+      "path": "/api/v1/webhooks",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "webhooks.delete-webhook": {
+      "abilities": [
+        "webhooks:write"
+      ],
+      "method": "DELETE",
+      "operation_id": "deleteWebhook",
+      "path": "/api/v1/webhooks/{webhook}",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "webhooks.get-webhook": {
+      "abilities": [
+        "webhooks:read"
+      ],
+      "method": "GET",
+      "operation_id": "getWebhook",
+      "path": "/api/v1/webhooks/{webhook}",
+      "write_safety": null
+    },
+    "webhooks.list-webhooks": {
+      "abilities": [
+        "webhooks:read"
+      ],
+      "method": "GET",
+      "operation_id": "listWebhooks",
+      "path": "/api/v1/webhooks",
+      "write_safety": null
+    },
+    "webhooks.test-webhook": {
+      "abilities": [
+        "webhooks:write"
+      ],
+      "method": "POST",
+      "operation_id": "testWebhook",
+      "path": "/api/v1/webhooks/{webhook}/test",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "webhooks.update-webhook": {
+      "abilities": [
+        "webhooks:write"
+      ],
+      "method": "PUT",
+      "operation_id": "updateWebhook",
+      "path": "/api/v1/webhooks/{webhook}",
+      "write_safety": {
+        "idempotency": "unsupported",
+        "concurrency": "unsupported",
+        "retry": "never"
+      }
+    }
+  },
+  "required_operation_ids": [
+    "listChannels",
+    "getChannel",
+    "listChannelCompetitors",
+    "addChannelCompetitor",
+    "deleteChannelCompetitor",
+    "listChannelIdeas",
+    "createChannelIdea",
+    "generateChannelIdeas",
+    "generateIdeasFromChannel",
+    "generateIdeasFromVideo",
+    "listChannelScripts",
+    "createChannelScript",
+    "listChannelTemplates",
+    "createTemplate",
+    "getTemplate",
+    "updateTemplate",
+    "archiveTemplate",
+    "restoreTemplate",
+    "listThumbnailGenerations",
+    "createThumbnailGeneration",
+    "getThumbnailGeneration",
+    "listChannelVoices",
+    "validateVoiceProfile",
+    "commitVoiceProfile",
+    "getVoiceProfile",
+    "getIdea",
+    "changeIdeaTopic",
+    "writeIdea",
+    "listIntelBookmarks",
+    "createIntelBookmark",
+    "deleteIntelBookmark",
+    "lookupIntelChannel",
+    "searchIntelChannels",
+    "lookupIntelVideo",
+    "searchIntelVideos",
+    "getScript",
+    "startScriptAgentRun",
+    "getScriptAgentRun",
+    "cancelScriptAgentRun",
+    "getScriptContent",
+    "exportScript",
+    "pollScriptGeneration",
+    "generateScriptOutline",
+    "generateScript",
+    "humanizeScript",
+    "getTeam",
+    "getTeamCredits",
+    "getThumbnailUsage",
+    "listApiTokens",
+    "createApiToken",
+    "deleteApiToken",
+    "listWebhooks",
+    "createWebhook",
+    "getWebhook",
+    "updateWebhook",
+    "deleteWebhook",
+    "testWebhook",
+    "listProjects",
+    "createProject",
+    "getProject",
+    "updateProject",
+    "moveProject",
+    "promoteProject",
+    "archiveProject",
+    "restoreProject",
+    "listProjectComments",
+    "createProjectComment",
+    "listProjectActivity",
+    "listProjectAttachments",
+    "listProjectTasks",
+    "listProjectNotifications",
+    "readProjectNotification",
+    "readAllProjectNotifications",
+    "getProjectProduction",
+    "updateProjectProduction",
+    "getOperation"
+  ],
+  "source_sha256": "dfe268e882f82463d1276a4c6e2628ff587c045d1e7d3d1c447ef2ab22de3c66",
+  "supported_contract_range": "^1.0.0"
+}

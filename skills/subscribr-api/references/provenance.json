@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "source_sha256": "dfe268e882f82463d1276a4c6e2628ff587c045d1e7d3d1c447ef2ab22de3c66",
+  "artifacts": {
+    "skills/subscribr-api/SKILL.md": "58b3e944d11eea8ad09f0182ad369a4833f1ab446500c2fdb5a52ed927c89bfd",
+    "skills/subscribr-api/references/endpoints.md": "eecb8872a026eeca384fadc2b5a35d3b2578dc609815f7821a49b4bc0e856f43",
+    "skills/subscribr-api/references/operations.json": "3911ce2081625d82f019cc3a5105e7590321a6255fa66241b368f2319527d237"
+  }
+}
