@@ -115,6 +115,20 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `GET` | `/api/v1/channels/{channel}/thumbnails/generations/{runId}` | `getThumbnailGeneration` | `scripts:read`, `thumbnails:read` | read |
 | `GET` | `/api/v1/team/thumbnails/usage` | `getThumbnailUsage` | `scripts:read`, `thumbnails:read` | read |
 
+## Video
+
+| Method | Path | Operation | Abilities | Safety |
+|---|---|---|---|---|
+| `GET` | `/api/v1/video/capabilities` | `videoListCapabilities` | `video:read` | read |
+| `GET` | `/api/v1/video/channels` | `videoListChannels` | `video:read` | read |
+| `GET` | `/api/v1/video/channels/{videoChannel}` | `videoGetChannel` | `video:read` | read |
+| `GET` | `/api/v1/video/voices` | `videoListVoices` | `video:read` | read |
+| `GET` | `/api/v1/video/voices/{voice}` | `videoGetVoice` | `video:read` | read |
+| `GET` | `/api/v1/video/avatars` | `videoListAvatars` | `video:read` | read |
+| `GET` | `/api/v1/video/avatars/{avatar}` | `videoGetAvatar` | `video:read` | read |
+| `GET` | `/api/v1/video/media-assets` | `videoListMediaAssets` | `video:read` | read |
+| `GET` | `/api/v1/video/media-assets/{mediaAsset}` | `videoGetMediaAsset` | `video:read` | read |
+
 ## Voices
 
 | Method | Path | Operation | Abilities | Safety |

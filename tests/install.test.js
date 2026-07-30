@@ -91,11 +91,28 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /scripts/);
   assert.match(help.stdout, /operations/);
+  assert.match(help.stdout, /video\s+\(9 actions\)/);
 
   const operationHelp = runCli(destination, "operations", "help");
   assert.equal(operationHelp.status, 0, operationHelp.stderr);
   assert.match(operationHelp.stdout, /get-operation/);
   assert.match(operationHelp.stdout, /\/api\/v1\/operations\/\{operation\}/);
+
+  const videoHelp = runCli(destination, "video", "help");
+  assert.equal(videoHelp.status, 0, videoHelp.stderr);
+  assert.match(videoHelp.stdout, /list-capabilities/);
+  assert.match(videoHelp.stdout, /get-channel/);
+  assert.match(videoHelp.stdout, /required: --video-channel <value>/);
+  assert.match(videoHelp.stdout, /get-media-asset/);
+  assert.match(videoHelp.stdout, /required: --media-asset <value>/);
+
+  const installedSkill = fs.readFileSync(
+    path.join(cwd, ".agents", "skills", "subscribr-api", "SKILL.md"),
+    "utf8",
+  );
+  assert.match(installedSkill, /video_capability_unavailable/);
+  assert.match(installedSkill, /owner\/admin-only/);
+  assert.match(installedSkill, /quote, project, render/);
 
   fs.writeFileSync(cli, "custom\n");
   assert.equal(install(cwd, "--cli-dir", relativeDestination).status, 1);

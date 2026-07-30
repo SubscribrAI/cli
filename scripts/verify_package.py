@@ -26,6 +26,17 @@ EXPECTED_PACKAGE_FILES = {
     "subscribr.py",
 }
 ALLOWED_URL_HOSTS = {"subscribr.com", "github.com"}
+VIDEO_READ_OPERATIONS = {
+    "videoGetAvatar",
+    "videoGetChannel",
+    "videoGetMediaAsset",
+    "videoGetVoice",
+    "videoListAvatars",
+    "videoListCapabilities",
+    "videoListChannels",
+    "videoListMediaAssets",
+    "videoListVoices",
+}
 SECRET = re.compile(r"(?:sk_live_|sk_test_|ghp_|github_pat_)[A-Za-z0-9_-]{16,}")
 URL = re.compile(r"https?://[^\s<>\"'`]+")
 
@@ -84,6 +95,20 @@ def main() -> None:
         fail("operation metadata does not exactly cover the canonical required operation IDs")
     if "getOperation" not in operation_ids:
         fail("operation metadata is missing the public getOperation polling route")
+    video_operations = {
+        operation["operation_id"]: operation
+        for key, operation in operations["operations"].items()
+        if key.startswith("video.")
+    }
+    if set(video_operations) != VIDEO_READ_OPERATIONS:
+        fail("operation metadata does not contain exactly the nine public Video reads")
+    if any(
+        operation["method"] != "GET"
+        or operation["abilities"] != ["video:read"]
+        or operation["write_safety"] is not None
+        for operation in video_operations.values()
+    ):
+        fail("public Video operations must remain read-only and require video:read")
 
     print(f"package verification passed: 10 allowlisted files, {len(operation_ids)} operations, provenance current")
 

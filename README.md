@@ -2,7 +2,7 @@
 
 Zero-dependency Python transport wrapper and agent skill for the canonical [Subscribr Customer API](https://subscribr.com/youtube-api).
 
-The CLI route map is generated from Subscribr's OpenAPI contract. It includes Projects board management, scripts and Agent Mode cancellation, ideas, asynchronous operation polling, Team token CRUD, Intel research, templates, strict voice validation/commit, thumbnails, notifications, tasks, and webhooks. Domain rules remain server-owned.
+The CLI route map is generated from Subscribr's OpenAPI contract. It includes Projects board management, scripts and Agent Mode cancellation, ideas, asynchronous operation polling, Team token CRUD, Intel research, templates, strict voice validation/commit, thumbnails, notifications, tasks, webhooks, and the current Subscribr Video read surface. Domain rules remain server-owned.
 
 ## Install
 
@@ -37,13 +37,22 @@ subscribr templates create-template --channel 42 \
   --body '{"name":"Explainer","prompt":"Write a structured explainer..."}' \
   --idempotency-key template-1
 subscribr voices validate-voice-profile --channel 42 --body @voice.json
+subscribr video list-capabilities
+subscribr video list-channels
+subscribr video get-channel --video-channel stch_01hz3k9pb1z7c5m2r6n0y4x2a2
+subscribr video list-voices --page 1 --per-page 20
+subscribr video get-voice --voice 820e8400-e29b-41d4-a716-446655440003
+subscribr video list-avatars --page 1 --per-page 20
+subscribr video get-avatar --avatar 820e8400-e29b-41d4-a716-446655440002
+subscribr video list-media-assets --page 1 --per-page 20
+subscribr video get-media-asset --media-asset 820e8400-e29b-41d4-a716-446655440006
 ```
 
 Path parameters are shown by `<domain> help`. Other flags become query parameters for reads or JSON fields for writes. `--body` accepts a JSON object/array; `--idempotency-key` and `--if-match` become transport headers. JSON results go to stdout; errors go to stderr with stable exit classes.
 
 Exit codes: `2` authentication/authorization, `3` validation/not found, `4` revision/conflict, `5` rate limiting, `6` transient server/network failure, and `64` CLI usage.
 
-The CLI retries reads and idempotency-keyed writes only. A retry uses the identical payload and key. Poll a returned operation with `subscribr operations get-operation --operation <uuid>`; `Ctrl-C` never silently cancels server work.
+The CLI retries reads and idempotency-keyed writes only. Non-idempotent writes are never retried automatically. For eligible retries, `Retry-After` is honored as either seconds or an HTTP date. Delays above five seconds are returned to the caller instead of making the CLI wait, and the CLI never retries before a valid requested delay. A write retry uses the identical payload and idempotency key. Poll a returned operation with `subscribr operations get-operation --operation <uuid>`; `Ctrl-C` never silently cancels server work.
 
 ## Contract and provenance
 
@@ -52,7 +61,15 @@ The CLI retries reads and idempotency-keyed writes only. A retry uses the identi
 - `skills/subscribr-api/references/provenance.json` — immutable artifact digests
 - `skills/subscribr-api/SKILL.md` — authored workflow guidance
 
-YouTube research remains available through the Intel video operations. Subscribr Video is Subscribr's video-production surface; its public Main API commands will be added only when the canonical `/api/v1/video/...` OpenAPI operations ship. Until then, this CLI deliberately has no Video discovery, configuration, quote, render, artifact, cancellation, or revision command. The generic operation endpoint only polls an operation ID already returned by a public API operation.
+### Subscribr Video availability
+
+The `video` domain currently exposes exactly nine read operations: capability discovery; Channel list/detail; custom voice list/detail; custom avatar list/detail; and reference media list/detail. They all require `video:read` on the Team-bound API token (API key).
+
+This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
+
+Subscribr Video quote, project, render, cancellation, artifact, and revision writes are not shipped in this CLI slice. Do not infer them from product nouns or from the generic operation poller. `operations get-operation` only polls an operation ID returned by an already-shipped public operation.
+
+YouTube research remains available separately through the Intel video operations.
 
 ## Development
 

@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import urllib.error
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +17,18 @@ SPEC.loader.exec_module(subscribr)
 
 
 class CliContractTest(unittest.TestCase):
+    VIDEO_ROUTES = {
+        "video.list-capabilities": ("videoListCapabilities", "/api/v1/video/capabilities"),
+        "video.list-channels": ("videoListChannels", "/api/v1/video/channels"),
+        "video.get-channel": ("videoGetChannel", "/api/v1/video/channels/{videoChannel}"),
+        "video.list-voices": ("videoListVoices", "/api/v1/video/voices"),
+        "video.get-voice": ("videoGetVoice", "/api/v1/video/voices/{voice}"),
+        "video.list-avatars": ("videoListAvatars", "/api/v1/video/avatars"),
+        "video.get-avatar": ("videoGetAvatar", "/api/v1/video/avatars/{avatar}"),
+        "video.list-media-assets": ("videoListMediaAssets", "/api/v1/video/media-assets"),
+        "video.get-media-asset": ("videoGetMediaAsset", "/api/v1/video/media-assets/{mediaAsset}"),
+    }
+
     def test_generated_metadata_covers_all_current_operations(self):
         operation_ids = {route["operation_id"] for route in subscribr.ROUTES.values()}
         self.assertEqual(set(subscribr.METADATA["required_operation_ids"]), operation_ids)
@@ -26,6 +39,19 @@ class CliContractTest(unittest.TestCase):
         self.assertIn("projects.list-projects", subscribr.ROUTES)
         self.assertIn("templates.create-template", subscribr.ROUTES)
         self.assertIn("voices.commit-voice-profile", subscribr.ROUTES)
+
+    def test_video_surface_contains_exactly_the_nine_canonical_reads(self):
+        routes = {
+            key: (route["operation_id"], route["path"])
+            for key, route in subscribr.ROUTES.items()
+            if key.startswith("video.")
+        }
+
+        self.assertEqual(self.VIDEO_ROUTES, routes)
+        for key in self.VIDEO_ROUTES:
+            self.assertEqual("GET", subscribr.ROUTES[key]["method"])
+            self.assertEqual(["video:read"], subscribr.ROUTES[key]["abilities"])
+            self.assertIsNone(subscribr.ROUTES[key]["write_safety"])
 
     def test_aliases_resolve_to_generated_routes(self):
         key, route = subscribr.resolve_route("scripts", "agent-cancel")
@@ -50,6 +76,33 @@ class CliContractTest(unittest.TestCase):
         self.assertEqual("/api/v1/projects/project%3Av1%3Ascript%3A8", path)
         self.assertEqual({"title": "Updated"}, body)
         self.assertEqual({"Idempotency-Key": "once-1", "If-Match": '"project-r1"'}, headers)
+
+    def test_camel_case_contract_parameters_use_kebab_case_cli_options(self):
+        route = subscribr.ROUTES["video.get-media-asset"]
+        method, path, body, headers = subscribr.build_request(
+            route,
+            {"media_asset": "820e8400-e29b-41d4-a716-446655440006"},
+        )
+
+        self.assertEqual("GET", method)
+        self.assertEqual(
+            "/api/v1/video/media-assets/820e8400-e29b-41d4-a716-446655440006",
+            path,
+        )
+        self.assertIsNone(body)
+        self.assertEqual({}, headers)
+        self.assertEqual("video-channel", subscribr.parameter_option("videoChannel"))
+
+    def test_video_asset_lists_encode_page_and_per_page_query_options(self):
+        for key in ("video.list-voices", "video.list-avatars", "video.list-media-assets"):
+            route = subscribr.ROUTES[key]
+            method, path, body, headers = subscribr.build_request(route, {"page": 2, "per_page": 5})
+
+            self.assertEqual("GET", method)
+            self.assertEqual(f"{route['path']}?page=2&per_page=5", path)
+            self.assertIsNone(body)
+            self.assertEqual({}, headers)
+            self.assertEqual(["page", "per_page"], route["query_parameters"])
 
     def test_generated_write_safety_requires_and_rejects_transport_headers(self):
         update_route = subscribr.ROUTES["projects.update-project"]
@@ -125,6 +178,39 @@ class CliContractTest(unittest.TestCase):
             self.assertEqual(0, subscribr.run(["version"]))
         self.assertEqual("2.0.0\n", stdout.getvalue())
 
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run(["video", "help"]))
+        self.assertIn("optional: --page <value> --per-page <value>", stdout.getvalue())
+
+    def test_run_prints_the_server_json_without_rewriting_it(self):
+        payload = {
+            "data": [{"id": "820e8400-e29b-41d4-a716-446655440003", "future": {"nested": True}}],
+            "pagination": {"current_page": 1, "per_page": 20, "total": 1, "last_page": 1},
+        }
+        stdout = io.StringIO()
+        with patch.object(subscribr, "request", return_value=payload), redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run(["video", "list-voices", "--page", "1", "--per-page", "20"]))
+
+        self.assertEqual(payload, json.loads(stdout.getvalue()))
+
+    def test_authored_docs_define_the_video_slice_and_its_boundaries(self):
+        readme = (ROOT / "README.md").read_text()
+        skill = (ROOT / "skills/subscribr-api/SKILL.md").read_text()
+
+        for command in self.VIDEO_ROUTES:
+            action = command.split(".", 1)[1]
+            self.assertIn(f"video {action}", readme)
+            self.assertIn(f"video {action}", skill)
+        for document in (readme, skill):
+            self.assertIn("video_capability_unavailable", document)
+            self.assertIn("video_provisioning_required", document)
+            self.assertIn("Team-bound", document)
+            self.assertIn("owner/admin-only", document)
+            self.assertIn("quote", document)
+            self.assertIn("revision", document)
+        self.assertIn("Subscribr Video capability, Channel, and custom-asset reads", skill)
+
 
 class RequestTest(unittest.TestCase):
     def setUp(self):
@@ -151,13 +237,55 @@ class RequestTest(unittest.TestCase):
         self.assertEqual(1, opener.call_count)
         self.assertEqual(subscribr.EXIT_TRANSIENT, raised.exception.exit_code)
 
-    def test_keyed_write_can_retry_identical_request(self):
+    def test_keyed_write_can_retry_the_identical_request(self):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = b'{"data":{"id":"project:v1:idea:1"}}'
         with patch("urllib.request.urlopen", side_effect=[urllib.error.URLError("down"), response]) as opener, patch("time.sleep"):
             result = subscribr.request("POST", "/api/v1/projects", {"title": "A"}, {"Idempotency-Key": "same"})
         self.assertEqual("project:v1:idea:1", result["data"]["id"])
         self.assertEqual(2, opener.call_count)
+
+    def test_numeric_retry_after_is_honored_without_retrying_early(self):
+        error = urllib.error.HTTPError(
+            "https://example.test",
+            429,
+            "Rate limited",
+            {"Retry-After": "3"},
+            io.BytesIO(b'{"error":{"code":"rate_limited"}}'),
+        )
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b'{"ok":true}'
+
+        with patch("urllib.request.urlopen", side_effect=[error, response]) as opener, patch("time.sleep") as sleeper:
+            self.assertEqual({"ok": True}, subscribr.request("GET", "/api/v1/team"))
+
+        self.assertEqual(2, opener.call_count)
+        sleeper.assert_called_once_with(3.0)
+
+    def test_http_date_retry_after_is_parsed_relative_to_the_current_time(self):
+        current = datetime(2026, 7, 29, 12, 0, 0, tzinfo=timezone.utc)
+
+        self.assertEqual(
+            4.0,
+            subscribr.retry_after_seconds("Wed, 29 Jul 2026 12:00:04 GMT", current),
+        )
+
+    def test_retry_after_above_the_wait_threshold_returns_429_without_retrying(self):
+        error = urllib.error.HTTPError(
+            "https://example.test",
+            429,
+            "Rate limited",
+            {"Retry-After": "6"},
+            io.BytesIO(b'{"error":{"code":"rate_limited"}}'),
+        )
+
+        with patch("urllib.request.urlopen", side_effect=error) as opener, patch("time.sleep") as sleeper:
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request("GET", "/api/v1/team")
+
+        self.assertEqual(subscribr.EXIT_RATE_LIMIT, raised.exception.exit_code)
+        self.assertEqual(1, opener.call_count)
+        sleeper.assert_not_called()
 
     def test_http_errors_map_to_stable_exit_classes(self):
         error = urllib.error.HTTPError("https://example.test", 409, "Conflict", {}, io.BytesIO(b'{"error":{"code":"revision_conflict"}}'))

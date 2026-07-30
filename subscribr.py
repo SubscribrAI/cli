@@ -11,6 +11,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,7 @@ EXIT_CONFLICT = 4
 EXIT_RATE_LIMIT = 5
 EXIT_TRANSIENT = 6
 EXIT_USAGE = 64
+MAX_AUTOMATIC_RETRY_WAIT_SECONDS = 5.0
 
 
 def load_metadata(path: Path = METADATA_PATH) -> dict[str, Any]:
@@ -93,6 +96,25 @@ def retryable(method: str, headers: dict[str, str]) -> bool:
     return method in {"GET", "HEAD", "OPTIONS"} or "Idempotency-Key" in headers
 
 
+def retry_after_seconds(value: str | None, current_time: datetime | None = None) -> float | None:
+    if value is None:
+        return None
+
+    value = value.strip()
+    if re.fullmatch(r"\d+", value):
+        return float(value)
+
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+
+    current_time = current_time or datetime.now(timezone.utc)
+    return max(0.0, (retry_at - current_time).total_seconds())
+
+
 def request(
     method: str,
     path: str,
@@ -117,8 +139,10 @@ def request(
             except (json.JSONDecodeError, ValueError):
                 detail = raw
             if can_retry and error.code in (429, 500, 502, 503, 504) and attempt < max_attempts:
-                retry_after = error.headers.get("Retry-After") if error.headers else None
-                delay = min(float(retry_after), 5.0) if retry_after and retry_after.isdigit() else min(0.25 * (2 ** (attempt - 1)), 2.0)
+                retry_after = retry_after_seconds(error.headers.get("Retry-After") if error.headers else None)
+                if retry_after is not None and retry_after > MAX_AUTOMATIC_RETRY_WAIT_SECONDS:
+                    raise CliError(f"HTTP {error.code}", status_exit_code(error.code), detail) from error
+                delay = retry_after if retry_after is not None else min(0.25 * (2 ** (attempt - 1)), 2.0)
                 time.sleep(delay)
                 continue
             raise CliError(f"HTTP {error.code}", status_exit_code(error.code), detail) from error
@@ -133,6 +157,18 @@ def request(
 
 def extract_path_params(template: str) -> list[str]:
     return re.findall(r"\{(\w+)\}", template)
+
+
+def parameter_option(parameter: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "-", parameter).replace("_", "-").lower()
+
+
+def parameter_argument_key(parameter: str, arguments: dict[str, Any]) -> str | None:
+    if parameter in arguments:
+        return parameter
+
+    snake_case = re.sub(r"(?<!^)(?=[A-Z])", "_", parameter).lower()
+    return snake_case if snake_case in arguments else None
 
 
 def try_json_parse(value: str) -> Any:
@@ -199,9 +235,10 @@ def build_request(route: dict[str, Any], arguments: dict[str, Any]) -> tuple[str
         raise CliError("This operation does not support --if-match.", EXIT_USAGE)
 
     for parameter in extract_path_params(path):
-        if parameter not in arguments:
-            raise CliError(f"Missing required path param: --{parameter.replace('_', '-')}", EXIT_USAGE)
-        path = path.replace(f"{{{parameter}}}", urllib.parse.quote(str(arguments.pop(parameter)), safe=""))
+        argument_key = parameter_argument_key(parameter, arguments)
+        if argument_key is None:
+            raise CliError(f"Missing required path param: --{parameter_option(parameter)}", EXIT_USAGE)
+        path = path.replace(f"{{{parameter}}}", urllib.parse.quote(str(arguments.pop(argument_key)), safe=""))
 
     if raw_body is not None and method not in BODY_METHODS:
         raise CliError("--body is only supported for POST, PUT, and PATCH operations.", EXIT_USAGE)
@@ -249,10 +286,13 @@ def print_domain_help(domain: str) -> None:
     print(f"Subscribr CLI — {domain} actions:\n")
     for key, route in sorted(actions.items()):
         action = key.split(".", 1)[1]
-        required = " ".join(f"--{name.replace('_', '-')} <value>" for name in extract_path_params(route["path"]))
+        required = " ".join(f"--{parameter_option(name)} <value>" for name in extract_path_params(route["path"]))
+        optional = " ".join(f"--{parameter_option(name)} <value>" for name in route.get("query_parameters", []))
         print(f"  {action:34s} {route['method']:6s} {route['path']}")
         if required:
             print(f"  {'':34s} required: {required}")
+        if optional:
+            print(f"  {'':34s} optional: {optional}")
 
 
 def run(args: list[str]) -> int:

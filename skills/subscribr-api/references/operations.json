@@ -11,9 +11,10 @@
       "method": "POST",
       "operation_id": "addChannelCompetitor",
       "path": "/api/v1/channels/{channel}/competitors",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -24,9 +25,10 @@
       "method": "DELETE",
       "operation_id": "deleteChannelCompetitor",
       "path": "/api/v1/channels/{channel}/competitors/{competitor}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -37,6 +39,7 @@
       "method": "GET",
       "operation_id": "getChannel",
       "path": "/api/v1/channels/{channel}",
+      "query_parameters": [],
       "write_safety": null
     },
     "channels.list-channel-competitors": {
@@ -46,6 +49,7 @@
       "method": "GET",
       "operation_id": "listChannelCompetitors",
       "path": "/api/v1/channels/{channel}/competitors",
+      "query_parameters": [],
       "write_safety": null
     },
     "channels.list-channels": {
@@ -55,6 +59,11 @@
       "method": "GET",
       "operation_id": "listChannels",
       "path": "/api/v1/channels",
+      "query_parameters": [
+        "search",
+        "per_page",
+        "page"
+      ],
       "write_safety": null
     },
     "ideas.change-idea-topic": {
@@ -64,9 +73,10 @@
       "method": "POST",
       "operation_id": "changeIdeaTopic",
       "path": "/api/v1/ideas/{idea}/change-topic",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -77,9 +87,10 @@
       "method": "POST",
       "operation_id": "createChannelIdea",
       "path": "/api/v1/channels/{channel}/ideas",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -90,9 +101,10 @@
       "method": "POST",
       "operation_id": "generateChannelIdeas",
       "path": "/api/v1/channels/{channel}/ideas/generate",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -103,9 +115,10 @@
       "method": "POST",
       "operation_id": "generateIdeasFromChannel",
       "path": "/api/v1/channels/{channel}/ideas/generate-from-channel",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -116,9 +129,10 @@
       "method": "POST",
       "operation_id": "generateIdeasFromVideo",
       "path": "/api/v1/channels/{channel}/ideas/generate-from-video",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -129,6 +143,7 @@
       "method": "GET",
       "operation_id": "getIdea",
       "path": "/api/v1/ideas/{idea}",
+      "query_parameters": [],
       "write_safety": null
     },
     "ideas.list-channel-ideas": {
@@ -138,6 +153,13 @@
       "method": "GET",
       "operation_id": "listChannelIdeas",
       "path": "/api/v1/channels/{channel}/ideas",
+      "query_parameters": [
+        "status",
+        "source_type",
+        "search",
+        "per_page",
+        "page"
+      ],
       "write_safety": null
     },
     "ideas.write-idea": {
@@ -147,9 +169,10 @@
       "method": "POST",
       "operation_id": "writeIdea",
       "path": "/api/v1/ideas/{idea}/write",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -160,9 +183,13 @@
       "method": "POST",
       "operation_id": "createIntelBookmark",
       "path": "/api/v1/intel/bookmarks",
+      "query_parameters": [
+        "page",
+        "bookmark"
+      ],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -173,9 +200,10 @@
       "method": "DELETE",
       "operation_id": "deleteIntelBookmark",
       "path": "/api/v1/intel/bookmarks/{bookmark}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -186,6 +214,10 @@
       "method": "GET",
       "operation_id": "listIntelBookmarks",
       "path": "/api/v1/intel/bookmarks",
+      "query_parameters": [
+        "page",
+        "bookmark"
+      ],
       "write_safety": null
     },
     "intel.lookup-intel-channel": {
@@ -195,9 +227,10 @@
       "method": "POST",
       "operation_id": "lookupIntelChannel",
       "path": "/api/v1/intel/channels/lookup",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -208,9 +241,10 @@
       "method": "POST",
       "operation_id": "lookupIntelVideo",
       "path": "/api/v1/intel/videos/lookup",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -221,9 +255,10 @@
       "method": "POST",
       "operation_id": "searchIntelChannels",
       "path": "/api/v1/intel/channels/search",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -234,9 +269,10 @@
       "method": "POST",
       "operation_id": "searchIntelVideos",
       "path": "/api/v1/intel/videos/search",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -247,6 +283,7 @@
       "method": "GET",
       "operation_id": "getOperation",
       "path": "/api/v1/operations/{operation}",
+      "query_parameters": [],
       "write_safety": null
     },
     "projects.archive-project": {
@@ -256,9 +293,10 @@
       "method": "POST",
       "operation_id": "archiveProject",
       "path": "/api/v1/projects/{project}/archive",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -269,9 +307,10 @@
       "method": "POST",
       "operation_id": "createProject",
       "path": "/api/v1/projects",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "optional",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -282,9 +321,10 @@
       "method": "POST",
       "operation_id": "createProjectComment",
       "path": "/api/v1/projects/{project}/comments",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "optional",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -295,6 +335,9 @@
       "method": "GET",
       "operation_id": "getProject",
       "path": "/api/v1/projects/{project}",
+      "query_parameters": [
+        "expand"
+      ],
       "write_safety": null
     },
     "projects.get-project-production": {
@@ -304,6 +347,7 @@
       "method": "GET",
       "operation_id": "getProjectProduction",
       "path": "/api/v1/projects/{project}/production",
+      "query_parameters": [],
       "write_safety": null
     },
     "projects.list-project-activity": {
@@ -313,6 +357,7 @@
       "method": "GET",
       "operation_id": "listProjectActivity",
       "path": "/api/v1/projects/{project}/activity",
+      "query_parameters": [],
       "write_safety": null
     },
     "projects.list-project-attachments": {
@@ -322,6 +367,7 @@
       "method": "GET",
       "operation_id": "listProjectAttachments",
       "path": "/api/v1/projects/{project}/attachments",
+      "query_parameters": [],
       "write_safety": null
     },
     "projects.list-project-comments": {
@@ -331,6 +377,7 @@
       "method": "GET",
       "operation_id": "listProjectComments",
       "path": "/api/v1/projects/{project}/comments",
+      "query_parameters": [],
       "write_safety": null
     },
     "projects.list-project-notifications": {
@@ -340,6 +387,10 @@
       "method": "GET",
       "operation_id": "listProjectNotifications",
       "path": "/api/v1/project-notifications",
+      "query_parameters": [
+        "limit",
+        "unread"
+      ],
       "write_safety": null
     },
     "projects.list-project-tasks": {
@@ -349,6 +400,10 @@
       "method": "GET",
       "operation_id": "listProjectTasks",
       "path": "/api/v1/tasks",
+      "query_parameters": [
+        "limit",
+        "overdue"
+      ],
       "write_safety": null
     },
     "projects.list-projects": {
@@ -358,6 +413,13 @@
       "method": "GET",
       "operation_id": "listProjects",
       "path": "/api/v1/projects",
+      "query_parameters": [
+        "channel_ids[]",
+        "search",
+        "include_archived",
+        "limit",
+        "expand"
+      ],
       "write_safety": null
     },
     "projects.move-project": {
@@ -367,9 +429,10 @@
       "method": "POST",
       "operation_id": "moveProject",
       "path": "/api/v1/projects/{project}/move",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -380,9 +443,10 @@
       "method": "POST",
       "operation_id": "promoteProject",
       "path": "/api/v1/projects/{project}/promote",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -393,9 +457,10 @@
       "method": "POST",
       "operation_id": "readAllProjectNotifications",
       "path": "/api/v1/project-notifications/read-all",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "optional",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -406,9 +471,10 @@
       "method": "POST",
       "operation_id": "readProjectNotification",
       "path": "/api/v1/project-notifications/{notification}/read",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "optional",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -419,9 +485,10 @@
       "method": "POST",
       "operation_id": "restoreProject",
       "path": "/api/v1/projects/{project}/restore",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -432,9 +499,10 @@
       "method": "PATCH",
       "operation_id": "updateProject",
       "path": "/api/v1/projects/{project}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -445,9 +513,10 @@
       "method": "PATCH",
       "operation_id": "updateProjectProduction",
       "path": "/api/v1/projects/{project}/production",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -458,9 +527,10 @@
       "method": "POST",
       "operation_id": "cancelScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/runs/{run}/cancel",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -471,9 +541,10 @@
       "method": "POST",
       "operation_id": "createChannelScript",
       "path": "/api/v1/channels/{channel}/scripts",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -484,6 +555,10 @@
       "method": "GET",
       "operation_id": "exportScript",
       "path": "/api/v1/scripts/{script}/export",
+      "query_parameters": [
+        "format",
+        "include_headings"
+      ],
       "write_safety": null
     },
     "scripts.generate-script": {
@@ -493,9 +568,10 @@
       "method": "POST",
       "operation_id": "generateScript",
       "path": "/api/v1/scripts/{script}/script/generate",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -506,9 +582,10 @@
       "method": "POST",
       "operation_id": "generateScriptOutline",
       "path": "/api/v1/scripts/{script}/outline/generate",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -519,6 +596,7 @@
       "method": "GET",
       "operation_id": "getScript",
       "path": "/api/v1/scripts/{script}",
+      "query_parameters": [],
       "write_safety": null
     },
     "scripts.get-script-agent-run": {
@@ -528,6 +606,7 @@
       "method": "GET",
       "operation_id": "getScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/runs/{run}",
+      "query_parameters": [],
       "write_safety": null
     },
     "scripts.get-script-content": {
@@ -537,6 +616,7 @@
       "method": "GET",
       "operation_id": "getScriptContent",
       "path": "/api/v1/scripts/{script}/content",
+      "query_parameters": [],
       "write_safety": null
     },
     "scripts.humanize-script": {
@@ -546,9 +626,10 @@
       "method": "POST",
       "operation_id": "humanizeScript",
       "path": "/api/v1/scripts/{script}/script/humanize",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -559,6 +640,13 @@
       "method": "GET",
       "operation_id": "listChannelScripts",
       "path": "/api/v1/channels/{channel}/scripts",
+      "query_parameters": [
+        "status",
+        "format",
+        "search",
+        "per_page",
+        "page"
+      ],
       "write_safety": null
     },
     "scripts.poll-script-generation": {
@@ -568,6 +656,9 @@
       "method": "GET",
       "operation_id": "pollScriptGeneration",
       "path": "/api/v1/scripts/{script}/generate/poll",
+      "query_parameters": [
+        "run_id"
+      ],
       "write_safety": null
     },
     "scripts.start-script-agent-run": {
@@ -577,9 +668,10 @@
       "method": "POST",
       "operation_id": "startScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/generate",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -590,9 +682,10 @@
       "method": "POST",
       "operation_id": "createApiToken",
       "path": "/api/v1/team/tokens",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -603,9 +696,10 @@
       "method": "DELETE",
       "operation_id": "deleteApiToken",
       "path": "/api/v1/team/tokens/{token}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -614,6 +708,7 @@
       "method": "GET",
       "operation_id": "getTeam",
       "path": "/api/v1/team",
+      "query_parameters": [],
       "write_safety": null
     },
     "team.get-team-credits": {
@@ -621,6 +716,7 @@
       "method": "GET",
       "operation_id": "getTeamCredits",
       "path": "/api/v1/team/credits",
+      "query_parameters": [],
       "write_safety": null
     },
     "team.list-api-tokens": {
@@ -630,6 +726,7 @@
       "method": "GET",
       "operation_id": "listApiTokens",
       "path": "/api/v1/team/tokens",
+      "query_parameters": [],
       "write_safety": null
     },
     "templates.archive-template": {
@@ -639,9 +736,10 @@
       "method": "POST",
       "operation_id": "archiveTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}/archive",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -652,9 +750,10 @@
       "method": "POST",
       "operation_id": "createTemplate",
       "path": "/api/v1/channels/{channel}/templates",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "unsupported",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -665,6 +764,7 @@
       "method": "GET",
       "operation_id": "getTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}",
+      "query_parameters": [],
       "write_safety": null
     },
     "templates.list-channel-templates": {
@@ -674,6 +774,9 @@
       "method": "GET",
       "operation_id": "listChannelTemplates",
       "path": "/api/v1/channels/{channel}/templates",
+      "query_parameters": [
+        "include_archived"
+      ],
       "write_safety": null
     },
     "templates.restore-template": {
@@ -683,9 +786,10 @@
       "method": "POST",
       "operation_id": "restoreTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}/restore",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -696,9 +800,10 @@
       "method": "PATCH",
       "operation_id": "updateTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "required",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -710,9 +815,10 @@
       "method": "POST",
       "operation_id": "createThumbnailGeneration",
       "path": "/api/v1/channels/{channel}/thumbnails/generations",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -724,6 +830,7 @@
       "method": "GET",
       "operation_id": "getThumbnailGeneration",
       "path": "/api/v1/channels/{channel}/thumbnails/generations/{runId}",
+      "query_parameters": [],
       "write_safety": null
     },
     "thumbnails.get-thumbnail-usage": {
@@ -734,6 +841,7 @@
       "method": "GET",
       "operation_id": "getThumbnailUsage",
       "path": "/api/v1/team/thumbnails/usage",
+      "query_parameters": [],
       "write_safety": null
     },
     "thumbnails.list-thumbnail-generations": {
@@ -744,6 +852,109 @@
       "method": "GET",
       "operation_id": "listThumbnailGenerations",
       "path": "/api/v1/channels/{channel}/thumbnails/generations",
+      "query_parameters": [
+        "source_type",
+        "page"
+      ],
+      "write_safety": null
+    },
+    "video.get-avatar": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoGetAvatar",
+      "path": "/api/v1/video/avatars/{avatar}",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.get-channel": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoGetChannel",
+      "path": "/api/v1/video/channels/{videoChannel}",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.get-media-asset": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoGetMediaAsset",
+      "path": "/api/v1/video/media-assets/{mediaAsset}",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.get-voice": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoGetVoice",
+      "path": "/api/v1/video/voices/{voice}",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.list-avatars": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoListAvatars",
+      "path": "/api/v1/video/avatars",
+      "query_parameters": [
+        "page",
+        "per_page"
+      ],
+      "write_safety": null
+    },
+    "video.list-capabilities": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoListCapabilities",
+      "path": "/api/v1/video/capabilities",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.list-channels": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoListChannels",
+      "path": "/api/v1/video/channels",
+      "query_parameters": [],
+      "write_safety": null
+    },
+    "video.list-media-assets": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoListMediaAssets",
+      "path": "/api/v1/video/media-assets",
+      "query_parameters": [
+        "page",
+        "per_page"
+      ],
+      "write_safety": null
+    },
+    "video.list-voices": {
+      "abilities": [
+        "video:read"
+      ],
+      "method": "GET",
+      "operation_id": "videoListVoices",
+      "path": "/api/v1/video/voices",
+      "query_parameters": [
+        "page",
+        "per_page"
+      ],
       "write_safety": null
     },
     "voices.commit-voice-profile": {
@@ -753,9 +964,10 @@
       "method": "POST",
       "operation_id": "commitVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/commit",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "required",
         "concurrency": "optional",
+        "idempotency": "required",
         "retry": "same-key"
       }
     },
@@ -766,6 +978,7 @@
       "method": "GET",
       "operation_id": "getVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/{voice}",
+      "query_parameters": [],
       "write_safety": null
     },
     "voices.list-channel-voices": {
@@ -775,6 +988,7 @@
       "method": "GET",
       "operation_id": "listChannelVoices",
       "path": "/api/v1/channels/{channel}/voices",
+      "query_parameters": [],
       "write_safety": null
     },
     "voices.validate-voice-profile": {
@@ -784,9 +998,10 @@
       "method": "POST",
       "operation_id": "validateVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/validate",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "revalidate"
       }
     },
@@ -797,9 +1012,10 @@
       "method": "POST",
       "operation_id": "createWebhook",
       "path": "/api/v1/webhooks",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -810,9 +1026,10 @@
       "method": "DELETE",
       "operation_id": "deleteWebhook",
       "path": "/api/v1/webhooks/{webhook}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -823,6 +1040,7 @@
       "method": "GET",
       "operation_id": "getWebhook",
       "path": "/api/v1/webhooks/{webhook}",
+      "query_parameters": [],
       "write_safety": null
     },
     "webhooks.list-webhooks": {
@@ -832,6 +1050,7 @@
       "method": "GET",
       "operation_id": "listWebhooks",
       "path": "/api/v1/webhooks",
+      "query_parameters": [],
       "write_safety": null
     },
     "webhooks.test-webhook": {
@@ -841,9 +1060,10 @@
       "method": "POST",
       "operation_id": "testWebhook",
       "path": "/api/v1/webhooks/{webhook}/test",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     },
@@ -854,9 +1074,10 @@
       "method": "PUT",
       "operation_id": "updateWebhook",
       "path": "/api/v1/webhooks/{webhook}",
+      "query_parameters": [],
       "write_safety": {
-        "idempotency": "unsupported",
         "concurrency": "unsupported",
+        "idempotency": "unsupported",
         "retry": "never"
       }
     }
@@ -884,8 +1105,8 @@
     "createThumbnailGeneration",
     "getThumbnailGeneration",
     "listChannelVoices",
-    "validateVoiceProfile",
     "commitVoiceProfile",
+    "validateVoiceProfile",
     "getVoiceProfile",
     "getIdea",
     "changeIdeaTopic",
@@ -897,6 +1118,24 @@
     "searchIntelChannels",
     "lookupIntelVideo",
     "searchIntelVideos",
+    "getOperation",
+    "listProjectNotifications",
+    "readAllProjectNotifications",
+    "readProjectNotification",
+    "listProjects",
+    "createProject",
+    "getProject",
+    "updateProject",
+    "listProjectActivity",
+    "archiveProject",
+    "listProjectAttachments",
+    "listProjectComments",
+    "createProjectComment",
+    "moveProject",
+    "getProjectProduction",
+    "updateProjectProduction",
+    "promoteProject",
+    "restoreProject",
     "getScript",
     "startScriptAgentRun",
     "getScriptAgentRun",
@@ -907,38 +1146,29 @@
     "generateScriptOutline",
     "generateScript",
     "humanizeScript",
+    "listProjectTasks",
     "getTeam",
     "getTeamCredits",
     "getThumbnailUsage",
     "listApiTokens",
     "createApiToken",
     "deleteApiToken",
+    "videoListAvatars",
+    "videoGetAvatar",
+    "videoListCapabilities",
+    "videoListChannels",
+    "videoGetChannel",
+    "videoListMediaAssets",
+    "videoGetMediaAsset",
+    "videoListVoices",
+    "videoGetVoice",
     "listWebhooks",
     "createWebhook",
+    "deleteWebhook",
     "getWebhook",
     "updateWebhook",
-    "deleteWebhook",
-    "testWebhook",
-    "listProjects",
-    "createProject",
-    "getProject",
-    "updateProject",
-    "moveProject",
-    "promoteProject",
-    "archiveProject",
-    "restoreProject",
-    "listProjectComments",
-    "createProjectComment",
-    "listProjectActivity",
-    "listProjectAttachments",
-    "listProjectTasks",
-    "listProjectNotifications",
-    "readProjectNotification",
-    "readAllProjectNotifications",
-    "getProjectProduction",
-    "updateProjectProduction",
-    "getOperation"
+    "testWebhook"
   ],
-  "source_sha256": "dfe268e882f82463d1276a4c6e2628ff587c045d1e7d3d1c447ef2ab22de3c66",
+  "source_sha256": "ff92738bf9c4837b174edc9f3c501ec37b8ef9893fa0a13e21383e901a63a060",
   "supported_contract_range": "^1.0.0"
 }

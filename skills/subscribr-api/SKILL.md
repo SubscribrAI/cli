@@ -1,6 +1,6 @@
 ---
 name: subscribr-api
-description: Use Subscribr's REST API, CLI, and MCP server for Projects board management, scripts, ideas, YouTube Intel research, templates, strict voice profiles, notifications, and webhooks. Use when a user asks to automate or inspect Subscribr data.
+description: Use Subscribr's REST API, CLI, and MCP server for Projects, scripts, ideas, YouTube Intel research, templates, strict voice profiles, notifications, webhooks, and Subscribr Video capability, Channel, and custom-asset reads. Use when a user asks to automate or inspect Subscribr data.
 ---
 
 # Subscribr API
@@ -45,7 +45,25 @@ Legacy voice profiles remain readable but are not writable until a complete v2 p
 
 ## YouTube research and Subscribr Video
 
-Keep using the Intel video lookup/search operations for open-world YouTube research and tracked-channel MCP research tools. The generic `getOperation` route may poll an operation ID already returned by a public API operation, but it does not publish a Video capability. Subscribr Video is Subscribr's video-production surface. Do not invent Video REST or CLI commands until the canonical public `/api/v1/video/...` operation metadata ships; that future slice must add capability discovery, channel setup, quotes, renders, artifacts, cancellation, and revisions together.
+Keep using the Intel video lookup/search operations for open-world YouTube research and tracked-channel MCP research tools. Subscribr Video is the video-production surface and now has a deliberately narrow, read-only public slice.
+
+Use a Team-bound API token (API key) with `video:read`; a token cannot switch Teams. Start with capability discovery, then read Channels or assets only from these canonical operations:
+
+| CLI command | Operation |
+|---|---|
+| `video list-capabilities` | `videoListCapabilities` |
+| `video list-channels` | `videoListChannels` |
+| `video get-channel --video-channel <id>` | `videoGetChannel` |
+| `video list-voices --page <n> --per-page <1-100>` | `videoListVoices` |
+| `video get-voice --voice <uuid>` | `videoGetVoice` |
+| `video list-avatars --page <n> --per-page <1-100>` | `videoListAvatars` |
+| `video get-avatar --avatar <uuid>` | `videoGetAvatar` |
+| `video list-media-assets --page <n> --per-page <1-100>` | `videoListMediaAssets` |
+| `video get-media-asset --media-asset <uuid>` | `videoGetMediaAsset` |
+
+The Video slice is default-off. Treat `video_capability_unavailable` as an explicit Team capability denial and `video_provisioning_required` as an explicit missing connection; neither is a reason to invent a fallback route. Asset reads are owner/admin-only in this slice until Channel-scoped asset authorization ships.
+
+Subscribr Video quote, project, render, cancellation, artifact, and revision writes are not shipped. Do not invent them. The generic `getOperation` route may poll an operation ID already returned by a shipped public operation, but it does not create or expose a Video write.
 
 ## MCP
 
