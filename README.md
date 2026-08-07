@@ -1,170 +1,90 @@
 # Subscribr CLI
 
-CLI and AI agent skill for the [Subscribr YouTube API](https://subscribr.ai/youtube-api). Built for developers, creators, and AI agents that want to automate YouTube content workflows — research competitors, generate video ideas, write scripts with AI, create thumbnails, and manage webhooks.
+Zero-dependency Python transport wrapper and agent skill for the canonical [Subscribr Customer API](https://subscribr.com/youtube-api).
 
-Works with [Claude Code](https://claude.ai/claude-code), [OpenAI Codex](https://developers.openai.com/codex/skills/), [Cursor](https://cursor.com/docs/skills), [OpenClaw](https://openclaw.ai), and any agent that supports the [Agent Skills spec](https://agentskills.io).
+The CLI route map is generated from Subscribr's OpenAPI contract. It includes Projects board management, scripts and Agent Mode cancellation, ideas, asynchronous operation polling, Team token CRUD, Intel research, templates, strict voice validation/commit, thumbnails, notifications, tasks, webhooks, and the current Subscribr Video read surface. Domain rules remain server-owned.
 
-New to Subscribr? [See what the API can do](https://subscribr.ai/youtube-api) or check out the [full API reference](https://subscribr.ai/youtube-api/reference).
-
-## What's in This Repo
-
-| File | What It Does |
-|------|-------------|
-| `skills/subscribr-api/SKILL.md` | AI agent skill — teaches coding agents how to use the Subscribr API |
-| `subscribr.py` | Standalone Python CLI — wraps every API endpoint, zero dependencies |
-
-## What is a Skill?
-
-A skill is a markdown file that gives AI coding agents specialized knowledge. When you install the Subscribr skill, your agent learns how to authenticate, call endpoints, handle async polling, and chain together workflows like "research a niche and write a script" — without you spelling out every API call.
-
-The skill follows the [Agent Skills spec](https://agentskills.io/specification) and is compatible with Claude Code, Codex, Cursor, OpenClaw, and other agents.
-
-## Installation
-
-### Option 1: npx (Recommended)
+## Install
 
 ```bash
-npx @giltotherescue/subscribr-cli
+npm install --global @giltotherescue/subscribr-cli
+export SUBSCRIBR_API_TOKEN=sk_live_...
+subscribr help
 ```
 
-Installs the skill into both `.agents/skills/` (Codex, Cursor, OpenClaw) and `.claude/skills/` (Claude Code).
+Create a Team-bound token at <https://subscribr.com/developer>. Override the production server for local or staging conformance with `SUBSCRIBR_API_BASE_URL`.
 
-To also install the Python CLI:
+Both `subscribr` and `subscribr-cli` launch the API CLI. To install the bundled agent skill into the current project:
 
 ```bash
-npx @giltotherescue/subscribr-cli --with-cli
+subscribr-install-skill
 ```
 
-### Option 2: curl
+The installer atomically replaces its own `subscribr-api` skill directories so removed generated references do not linger. To install the optional self-contained Python CLI bundle, use `subscribr-install-skill --with-cli`. It creates `./.subscribr-cli/` with `subscribr.py` and its generated operation metadata; run `python3 .subscribr-cli/subscribr.py help`. Use `--cli-dir tools/subscribr-cli` to choose another bundle directory and `--force` only when you intend to replace an existing bundle.
+
+## Examples
 
 ```bash
-# For Codex / Cursor / Agent Skills spec
-mkdir -p .agents/skills/subscribr-api
-curl -sL https://raw.githubusercontent.com/giltotherescue/subscribr-cli/main/skills/subscribr-api/SKILL.md \
-  -o .agents/skills/subscribr-api/SKILL.md
-
-# For Claude Code
-mkdir -p .claude/skills/subscribr-api
-curl -sL https://raw.githubusercontent.com/giltotherescue/subscribr-cli/main/skills/subscribr-api/SKILL.md \
-  -o .claude/skills/subscribr-api/SKILL.md
+subscribr team get-team
+subscribr team list-api-tokens
+subscribr channels list-channels
+subscribr projects list-projects --channel-id 42
+subscribr projects move-project --project project:v1:idea:7 \
+  --stage scripting --idempotency-key move-7-1 --if-match '"project-r3"'
+subscribr scripts cancel-script-agent-run --script 93 --run 18 \
+  --idempotency-key cancel-18-1
+subscribr templates create-template --channel 42 \
+  --body '{"name":"Explainer","prompt":"Write a structured explainer..."}' \
+  --idempotency-key template-1
+subscribr voices validate-voice-profile --channel 42 --body @voice.json
+subscribr video list-capabilities
+subscribr video list-channels
+subscribr video get-channel --video-channel stch_01hz3k9pb1z7c5m2r6n0y4x2a2
+subscribr video list-voices --page 1 --per-page 20
+subscribr video get-voice --voice 820e8400-e29b-41d4-a716-446655440003
+subscribr video list-avatars --page 1 --per-page 20
+subscribr video get-avatar --avatar 820e8400-e29b-41d4-a716-446655440002
+subscribr video list-media-assets --page 1 --per-page 20
+subscribr video get-media-asset --media-asset 820e8400-e29b-41d4-a716-446655440006
 ```
 
-### Option 3: Clone
+Path parameters are shown by `<domain> help`. Other flags become query parameters for reads or JSON fields for writes. `--body` accepts a JSON object/array; `--idempotency-key` and `--if-match` become transport headers. JSON results go to stdout; errors go to stderr with stable exit classes.
+
+Exit codes: `2` authentication/authorization, `3` validation/not found, `4` revision/conflict, `5` rate limiting, `6` transient server/network failure, and `64` CLI usage.
+
+The CLI retries reads and idempotency-keyed writes only. Non-idempotent writes are never retried automatically. For eligible retries, `Retry-After` is honored as either seconds or an HTTP date. Delays above five seconds are returned to the caller instead of making the CLI wait, and the CLI never retries before a valid requested delay. A write retry uses the identical payload and idempotency key. Poll a returned operation with `subscribr operations get-operation --operation <uuid>`; `Ctrl-C` never silently cancels server work.
+
+## Contract and provenance
+
+- `skills/subscribr-api/references/operations.json` — generated route/ability/safety metadata
+- `skills/subscribr-api/references/endpoints.md` — generated endpoint appendix
+- `skills/subscribr-api/references/provenance.json` — immutable artifact digests
+- `skills/subscribr-api/SKILL.md` — authored workflow guidance
+
+### Subscribr Video availability
+
+The `video` domain currently exposes exactly nine read operations: capability discovery; Channel list/detail; custom voice list/detail; custom avatar list/detail; and reference media list/detail. They all require `video:read` on the Team-bound API token (API key).
+
+This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
+
+Subscribr Video quote, project, render, cancellation, artifact, and revision writes are not shipped in this CLI slice. Do not infer them from product nouns or from the generic operation poller. `operations get-operation` only polls an operation ID returned by an already-shipped public operation.
+
+YouTube research remains available separately through the Intel video operations.
+
+## Agent Plugin and MCP
+
+This npm package is also an [Agent Plugins](https://agent-plugins.org/) 1.0.0 package. Its portable `plugin.json` identifies the package and its `skills/subscribr-api/` directory contains the Agent Skill. The bundled `subscribr` executable is the primary surface for deterministic API automation: it covers the complete public Customer API contract with explicit idempotency, concurrency, retry, and polling behavior.
+
+Subscribr's hosted MCP server is complementary rather than a CLI wrapper. Use `https://subscribr.ai/mcp/subscribr` for conversational, OAuth-capable clients that need the curated Projects, workspace, and Intel workflows. This package intentionally does not declare that remote MCP server in `mcp.json`: Agent Plugins 1.0 has no portable OAuth or credential-reference field, and a package must never ship a bearer token. Connect MCP through the client-specific OAuth flow in Subscribr's AI Integrations page.
+
+For coding agents, install the skill and invoke `subscribr` for full API automation. For conversational agents, connect the hosted MCP server. Both surfaces enforce the same server-side authorization and write-safety rules.
+
+## Development
 
 ```bash
-git clone https://github.com/giltotherescue/subscribr-cli.git
-cp -r subscribr-cli/skills/subscribr-api .agents/skills/  # Codex, Cursor, OpenClaw
-cp -r subscribr-cli/skills/subscribr-api .claude/skills/  # Claude Code
+npm test
+npm pack --dry-run
+python3 scripts/verify_package.py
 ```
 
-## Setup
-
-1. **Get a token** at [subscribr.ai/developer](https://subscribr.ai/developer) (requires Automation or Scale plan)
-2. **Set it in your environment:**
-
-```bash
-export SUBSCRIBR_API_TOKEN=sk_live_your_token_here
-```
-
-## Usage with AI Agents
-
-Once the skill is installed, ask your agent to do Subscribr tasks in natural language:
-
-```
-"Research the top personal finance YouTube channels"
-→ Uses Intel search to find channels and outlier videos
-
-"Generate 10 video ideas for my channel"
-→ Lists your channels, picks one, generates AI-powered ideas
-
-"Write a 1500-word script about index fund investing"
-→ Creates a script, generates an outline, then writes the full draft
-
-"Export my latest script as markdown"
-→ Finds recent scripts and exports the content
-
-"Create a thumbnail for my video about investing"
-→ Generates AI thumbnail concepts with brainstorm mode
-
-"Set up a webhook to notify me when scripts are done"
-→ Creates a webhook subscription for the script.generated event
-```
-
-The skill handles authentication, endpoint selection, async polling, and error handling automatically.
-
-## CLI Reference
-
-The CLI wraps all 45 Subscribr API endpoints. Requires Python 3.7+ with zero external dependencies.
-
-```
-subscribr <domain> <action> [--key value ...]
-```
-
-### Domains
-
-| Domain | Actions | Description |
-|--------|---------|-------------|
-| team | 2 | Account info and credit balance |
-| channels | 7 | Channel details, templates, voices, competitors |
-| intel | 4 | YouTube channel/video lookup and search |
-| bookmarks | 3 | Saved YouTube channels and videos |
-| ideas | 8 | Video ideas: list, create, generate, convert to script |
-| scripts | 11 | Scripts: create, outline, generate, humanize, export |
-| thumbnails | 4 | AI thumbnail generation: brainstorm, clone, improve |
-| webhooks | 6 | Webhook CRUD and testing |
-
-Run `subscribr <domain> help` to see all actions and required parameters.
-
-### Examples
-
-```bash
-# List your channels
-subscribr channels list
-
-# Search YouTube for channels in a niche
-subscribr intel search-channels --body '{"query": "personal finance", "limit": 20}'
-
-# Generate video ideas
-subscribr ideas generate --channel_id 42
-
-# Create and generate a script
-subscribr scripts create --channel_id 42 --title "My Video" --topic "How to invest" --length 1500
-subscribr scripts generate-outline --script_id 123
-subscribr scripts poll --script_id 123 --run_id abc123
-subscribr scripts generate --script_id 123
-subscribr scripts export --script_id 123 --format markdown
-
-# Generate a thumbnail
-subscribr thumbnails create --channel_id 42 --prompt "Investing in 2026" --num_variations 4
-```
-
-### Complex JSON Payloads
-
-For endpoints that need arrays or nested objects, use `--body`:
-
-```bash
-subscribr intel lookup-channels --body '{"identifiers": ["@mkbhd", "@linustechtips"]}'
-subscribr intel search-videos --body '{"query": "AI productivity tools", "limit": 15}'
-subscribr webhooks create --body '{"url": "https://example.com/hook", "events": ["script.generated"]}'
-```
-
-## MCP Server
-
-For conversational AI clients (Claude Desktop, ChatGPT, Cursor), Subscribr also offers an [MCP server](https://subscribr.ai/help/advanced/mcp-integration) for research and ideation. The MCP server is complementary to this CLI — it handles research and reading, while the CLI/API handles creation, generation, and automation.
-
-## API Documentation
-
-- **[YouTube API overview](https://subscribr.ai/youtube-api)** — what the API can do, use cases, and getting started
-- **[API reference](https://subscribr.ai/youtube-api/reference)** — full endpoint docs with examples
-- **[API reference for AI agents](https://subscribr.ai/api/docs/reference/ai)** — LLM-optimized plain text:
-  ```bash
-  curl -s https://subscribr.ai/api/docs/reference/ai
-  ```
-
-## Contributing
-
-Found a bug or want to add an endpoint? [Open an issue](https://github.com/giltotherescue/subscribr-cli/issues) or submit a PR.
-
-## License
-
-[MIT](LICENSE)
+The package intentionally uses only the Python and Node standard libraries.

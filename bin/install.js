@@ -3,47 +3,127 @@
 const fs = require("fs");
 const path = require("path");
 
-const SKILL_SRC = path.join(__dirname, "..", "skills", "subscribr-api", "SKILL.md");
+const SKILL_SRC = path.join(__dirname, "..", "skills", "subscribr-api");
 const CLI_SRC = path.join(__dirname, "..", "subscribr.py");
+const CLI_METADATA_SRC = path.join(SKILL_SRC, "references", "operations.json");
 
 // Standard locations per Agent Skills spec + Claude Code
 const AGENTS_DIR = path.join(process.cwd(), ".agents", "skills", "subscribr-api");
 const CLAUDE_DIR = path.join(process.cwd(), ".claude", "skills", "subscribr-api");
 
-function copyFile(src, dest, label) {
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
+function fail(message) {
+  console.error(`Error: ${message}`);
+  process.exit(1);
+}
+
+function optionValue(name) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) return null;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith("--")) fail(`${name} requires a path.`);
+  return value;
+}
+
+function pathExists(target) {
+  try {
+    fs.lstatSync(target);
+    return true;
+  } catch (error) {
+    if (error && error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function replaceDirectory(src, dest, label) {
+  const parent = path.dirname(dest);
+  const temporary = path.join(parent, `.${path.basename(dest)}.tmp-${process.pid}`);
+  const backup = path.join(parent, `.${path.basename(dest)}.backup-${process.pid}`);
+
+  fs.mkdirSync(parent, { recursive: true });
+  fs.rmSync(temporary, { recursive: true, force: true });
+  fs.rmSync(backup, { recursive: true, force: true });
+  fs.cpSync(src, temporary, { recursive: true, force: true });
+
+  try {
+    if (pathExists(dest)) fs.renameSync(dest, backup);
+    fs.renameSync(temporary, dest);
+    fs.rmSync(backup, { recursive: true, force: true });
+  } catch (error) {
+    fs.rmSync(temporary, { recursive: true, force: true });
+    if (!pathExists(dest) && pathExists(backup)) fs.renameSync(backup, dest);
+    throw error;
+  }
+
   console.log(`  \u2713 ${label} \u2192 ${path.relative(process.cwd(), dest)}`);
 }
 
+function copyCliBundle(dest, force) {
+  if (pathExists(dest) && !force) {
+    fail(`${path.relative(process.cwd(), dest) || dest} already exists; pass --force to replace it or choose --cli-dir.`);
+  }
+
+  const parent = path.dirname(dest);
+  const temporary = path.join(parent, `.${path.basename(dest)}.tmp-${process.pid}`);
+  const backup = path.join(parent, `.${path.basename(dest)}.backup-${process.pid}`);
+  const cli = path.join(temporary, "subscribr.py");
+  const metadata = path.join(temporary, "skills", "subscribr-api", "references", "operations.json");
+
+  fs.mkdirSync(parent, { recursive: true });
+  fs.rmSync(temporary, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(metadata), { recursive: true });
+  fs.rmSync(backup, { recursive: true, force: true });
+  fs.copyFileSync(CLI_SRC, cli);
+  fs.copyFileSync(CLI_METADATA_SRC, metadata);
+  fs.chmodSync(cli, 0o755);
+
+  try {
+    if (pathExists(dest)) fs.renameSync(dest, backup);
+    fs.renameSync(temporary, dest);
+    fs.rmSync(backup, { recursive: true, force: true });
+  } catch (error) {
+    fs.rmSync(temporary, { recursive: true, force: true });
+    if (!pathExists(dest) && pathExists(backup)) fs.renameSync(backup, dest);
+    throw error;
+  }
+
+  console.log(`  \u2713 CLI bundle \u2192 ${path.relative(process.cwd(), dest)}`);
+}
+
+const withCli = process.argv.includes("--with-cli");
+const cliDirectory = optionValue("--cli-dir");
+if (process.argv.includes("--cli-path")) fail("--cli-path has been replaced by directory-based --cli-dir.");
+const force = process.argv.includes("--force");
+const cliDestination = withCli || cliDirectory
+  ? path.resolve(process.cwd(), cliDirectory || ".subscribr-cli")
+  : null;
+
 console.log("\n  @giltotherescue/subscribr-cli\n");
 
-// Install to .agents/skills/ (Codex, Cursor, Agent Skills spec)
-copyFile(SKILL_SRC, path.join(AGENTS_DIR, "SKILL.md"), "Skill (.agents/skills/)");
+// These directories are installer-owned. Replacing them atomically avoids old
+// generated references surviving a contract update.
+replaceDirectory(SKILL_SRC, AGENTS_DIR, "Skill (.agents/skills/)");
 
-// Install to .claude/skills/ (Claude Code)
-copyFile(SKILL_SRC, path.join(CLAUDE_DIR, "SKILL.md"), "Skill (.claude/skills/)");
+replaceDirectory(SKILL_SRC, CLAUDE_DIR, "Skill (.claude/skills/)");
 
-// Install CLI if --with-cli flag is passed
-const withCli = process.argv.includes("--with-cli");
-if (withCli) {
-  const dest = path.join(process.cwd(), "subscribr.py");
-  copyFile(CLI_SRC, dest, "CLI (subscribr.py)");
-  try { fs.chmodSync(dest, 0o755); } catch (_) {}
+// Install the optional self-contained CLI bundle only when explicitly
+// requested. Its colocated generated metadata is required by subscribr.py.
+if (cliDestination) {
+  copyCliBundle(cliDestination, force);
 }
 
 console.log("\n  Setup:\n");
-console.log("  1. Get an API token at https://subscribr.ai/developer");
+console.log("  1. Get a Team-bound API token at https://subscribr.com/developer");
 console.log("  2. export SUBSCRIBR_API_TOKEN=sk_live_...\n");
 
-if (withCli) {
+if (cliDestination) {
+  const cli = path.relative(process.cwd(), path.join(cliDestination, "subscribr.py"));
   console.log("  CLI usage:\n");
-  console.log("  python3 subscribr.py help");
-  console.log("  python3 subscribr.py scripts create --channel_id 42 --title '...'\n");
+  console.log(`  python3 ${cli} help`);
+  console.log(`  python3 ${cli} scripts create-channel-script --channel 42 --title '...'\n`);
 } else {
   console.log("  To also install the Python CLI:");
-  console.log("  npx @giltotherescue/subscribr-cli --with-cli\n");
+  console.log("  subscribr-install-skill --with-cli [--cli-dir directory] [--force]\n");
 }
 
-console.log("  Docs: https://subscribr.ai/youtube-api");
-console.log("  API ref: curl -s https://subscribr.ai/api/docs/reference/ai\n");
+console.log("  Docs: https://subscribr.com/youtube-api");
+console.log("  API ref: curl -s https://subscribr.com/api/docs/reference/ai\n");
