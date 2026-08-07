@@ -8,6 +8,17 @@ const test = require("node:test");
 const ROOT = path.resolve(__dirname, "..");
 const INSTALLER = path.join(ROOT, "bin", "install.js");
 
+test("ships a portable Agent Plugins manifest without embedding MCP credentials", () => {
+  const plugin = JSON.parse(fs.readFileSync(path.join(ROOT, "plugin.json"), "utf8"));
+  const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+
+  assert.equal(plugin.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
+  assert.equal(plugin.name, "subscribr-cli");
+  assert.equal(plugin.version, packageJson.version);
+  assert.equal(fs.existsSync(path.join(ROOT, "mcp.json")), false);
+  assert.equal(fs.existsSync(path.join(ROOT, "skills", "subscribr-api", "SKILL.md")), true);
+});
+
 function project() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "subscribr-cli-install-"));
 }

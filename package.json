@@ -35,6 +35,7 @@
   "homepage": "https://subscribr.com/youtube-api",
   "files": [
     "bin/",
+    "plugin.json",
     "skills/",
     "subscribr.py",
     "LICENSE",

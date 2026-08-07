@@ -71,6 +71,14 @@ Subscribr Video quote, project, render, cancellation, artifact, and revision wri
 
 YouTube research remains available separately through the Intel video operations.
 
+## Agent Plugin and MCP
+
+This npm package is also an [Agent Plugins](https://agent-plugins.org/) 1.0.0 package. Its portable `plugin.json` identifies the package and its `skills/subscribr-api/` directory contains the Agent Skill. The bundled `subscribr` executable is the primary surface for deterministic API automation: it covers the complete public Customer API contract with explicit idempotency, concurrency, retry, and polling behavior.
+
+Subscribr's hosted MCP server is complementary rather than a CLI wrapper. Use `https://subscribr.ai/mcp/subscribr` for conversational, OAuth-capable clients that need the curated Projects, workspace, and Intel workflows. This package intentionally does not declare that remote MCP server in `mcp.json`: Agent Plugins 1.0 has no portable OAuth or credential-reference field, and a package must never ship a bearer token. Connect MCP through the client-specific OAuth flow in Subscribr's AI Integrations page.
+
+For coding agents, install the skill and invoke `subscribr` for full API automation. For conversational agents, connect the hosted MCP server. Both surfaces enforce the same server-side authorization and write-safety rules.
+
 ## Development
 
 ```bash

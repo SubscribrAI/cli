@@ -67,7 +67,7 @@ Subscribr Video quote, project, render, cancellation, artifact, and revision wri
 
 ## MCP
 
-Use `https://subscribr.com/mcp/subscribr/v2` for new ChatGPT, Claude, and other MCP connections. It exposes the compact semantic catalog and interactive Projects board. The original `https://subscribr.com/mcp/subscribr` endpoint remains a 16-tool compatibility surface for existing integrations; do not use it when a workflow requires Projects, Tasks, notifications, templates, or strict Voice Profile management.
+Use `https://subscribr.ai/mcp/subscribr` for ChatGPT, Claude, and other MCP connections. It is the canonical customer endpoint and exposes the focused semantic catalog with interactive Projects, Intel, and Script apps.
 
 Prefer MCP inside conversational hosts and REST/CLI for deterministic automation. Tools and embedded Apps still enforce the same Team, Channel, role, revision, idempotency, and confirmation rules as REST.
 

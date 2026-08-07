@@ -19,13 +19,14 @@ EXPECTED_PACKAGE_FILES = {
     "bin/install.js",
     "bin/subscribr.js",
     "package.json",
+    "plugin.json",
     "skills/subscribr-api/SKILL.md",
     "skills/subscribr-api/references/endpoints.md",
     "skills/subscribr-api/references/operations.json",
     "skills/subscribr-api/references/provenance.json",
     "subscribr.py",
 }
-ALLOWED_URL_HOSTS = {"subscribr.com", "github.com"}
+ALLOWED_URL_HOSTS = {"agent-plugins.org", "subscribr.ai", "subscribr.com", "github.com"}
 VIDEO_READ_OPERATIONS = {
     "videoGetAvatar",
     "videoGetChannel",
@@ -64,7 +65,7 @@ def main() -> None:
         if sha256(ROOT / relative) != expected:
             fail(f"artifact digest differs: {relative}")
 
-    declared = {"package.json", "LICENSE", "README.md", "subscribr.py"}
+    declared = {"package.json", "plugin.json", "LICENSE", "README.md", "subscribr.py"}
     for entry in package["files"]:
         if entry.endswith("/"):
             declared.update(str(path.relative_to(ROOT)) for path in (ROOT / entry).rglob("*") if path.is_file())
@@ -89,6 +90,12 @@ def main() -> None:
             if host not in ALLOWED_URL_HOSTS:
                 fail(f"unapproved URL host {host!r} in {relative}")
 
+    plugin = json.loads((ROOT / "plugin.json").read_text())
+    if plugin.get("$schema") != "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json":
+        fail("plugin manifest must target Agent Plugins 1.0.0")
+    if plugin.get("name") != "subscribr-cli" or plugin.get("version") != package["version"]:
+        fail("plugin manifest identity must match the published package")
+
     operation_ids = {operation["operation_id"] for operation in operations["operations"].values()}
     required_operation_ids = set(operations["required_operation_ids"])
     if not operation_ids or operation_ids != required_operation_ids:
@@ -110,7 +117,7 @@ def main() -> None:
     ):
         fail("public Video operations must remain read-only and require video:read")
 
-    print(f"package verification passed: 10 allowlisted files, {len(operation_ids)} operations, provenance current")
+    print(f"package verification passed: 11 allowlisted files, {len(operation_ids)} operations, provenance current")
 
 
 if __name__ == "__main__":
