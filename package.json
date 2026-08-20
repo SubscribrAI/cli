@@ -1,6 +1,6 @@
 {
   "name": "@giltotherescue/subscribr-cli",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Generated CLI transport and agent skill for the Subscribr Customer API",
   "bin": {
     "subscribr": "bin/subscribr.js",
@@ -32,7 +32,7 @@
     "type": "git",
     "url": "git+https://github.com/giltotherescue/subscribr-cli.git"
   },
-  "homepage": "https://subscribr.com/youtube-api",
+  "homepage": "https://subscribr.ai/youtube-api",
   "files": [
     "bin/",
     "plugin.json",

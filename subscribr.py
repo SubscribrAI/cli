@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
+import ssl
 import sys
 import time
 import urllib.error
@@ -16,7 +18,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 METADATA_PATH = Path(__file__).resolve().parent / "skills" / "subscribr-api" / "references" / "operations.json"
 BODY_METHODS = {"POST", "PUT", "PATCH"}
 EXIT_AUTH = 2
@@ -26,6 +28,7 @@ EXIT_RATE_LIMIT = 5
 EXIT_TRANSIENT = 6
 EXIT_USAGE = 64
 MAX_AUTOMATIC_RETRY_WAIT_SECONDS = 5.0
+TOKEN_PAGE_URL = "https://subscribr.ai/integrations"
 
 
 def load_metadata(path: Path = METADATA_PATH) -> dict[str, Any]:
@@ -61,11 +64,40 @@ def api_base() -> str:
     return os.environ.get("SUBSCRIBR_API_BASE_URL", METADATA["base_url"]).rstrip("/")
 
 
+def ssl_context() -> ssl.SSLContext | None:
+    """
+    Production uses the system trust store, so this returns None and urllib
+    applies its default.
+
+    `SUBSCRIBR_CA_BUNDLE` exists for the local and staging conformance runs the
+    README already describes: those hosts are served by a development root
+    (Herd, Valet, mkcert) that the system store does not carry. Supplying a
+    bundle is an explicit opt-in, so it also relaxes RFC-strict extension
+    checks that development roots routinely omit. Nothing here weakens the
+    default production path.
+    """
+    bundle = os.environ.get("SUBSCRIBR_CA_BUNDLE")
+    if not bundle:
+        return None
+
+    path = Path(bundle).expanduser()
+    if not path.is_file():
+        raise CliError(f"SUBSCRIBR_CA_BUNDLE does not point at a file: {path}", EXIT_USAGE)
+
+    context = ssl.create_default_context()
+    try:
+        context.load_verify_locations(cafile=str(path))
+    except ssl.SSLError as error:
+        raise CliError(f"SUBSCRIBR_CA_BUNDLE is not a readable CA bundle: {error}", EXIT_USAGE) from error
+    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return context
+
+
 def get_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
     token = os.environ.get("SUBSCRIBR_API_TOKEN")
     if not token:
         raise CliError(
-            "SUBSCRIBR_API_TOKEN is not set. Create a Team-bound token at https://subscribr.com/developer.",
+            f"SUBSCRIBR_API_TOKEN is not set. Create a Team-bound token at {TOKEN_PAGE_URL}.",
             EXIT_AUTH,
         )
     headers = {
@@ -94,6 +126,18 @@ def status_exit_code(status: int) -> int:
 
 def retryable(method: str, headers: dict[str, str]) -> bool:
     return method in {"GET", "HEAD", "OPTIONS"} or "Idempotency-Key" in headers
+
+
+def permanent_network_failure(reason: Any) -> bool:
+    """
+    Certificate and name-resolution failures are configuration problems, not
+    blips. Report them immediately with the underlying reason attached.
+    """
+    if isinstance(reason, ssl.SSLError):
+        return True
+    if isinstance(reason, socket.gaierror):
+        return True
+    return "CERTIFICATE_VERIFY_FAILED" in str(reason) or "Name or service not known" in str(reason)
 
 
 def retry_after_seconds(value: str | None, current_time: datetime | None = None) -> float | None:
@@ -126,10 +170,11 @@ def request(
     data = json.dumps(body).encode("utf-8") if body is not None else (b"{}" if method in BODY_METHODS else None)
     req = urllib.request.Request(api_base() + path, data=data, headers=headers, method=method)
     can_retry = retryable(method, headers)
+    context = ssl_context()
 
     for attempt in range(1, max_attempts + 1):
         try:
-            with urllib.request.urlopen(req, timeout=30) as response:
+            with urllib.request.urlopen(req, timeout=30, context=context) as response:
                 raw = response.read().decode("utf-8")
                 return json.loads(raw) if raw.strip() else {"status": "ok", "http_code": response.status}
         except urllib.error.HTTPError as error:
@@ -147,10 +192,24 @@ def request(
                 continue
             raise CliError(f"HTTP {error.code}", status_exit_code(error.code), detail) from error
         except urllib.error.URLError as error:
+            reason = str(error.reason)
+            # TLS and DNS failures never clear up on their own. Retrying them
+            # three times behind a "temporarily unreachable" message hides the
+            # one thing the caller needs to know.
+            if permanent_network_failure(error.reason):
+                raise CliError(
+                    f"Cannot reach {api_base()}: {reason}",
+                    EXIT_TRANSIENT,
+                    reason,
+                ) from error
             if can_retry and attempt < max_attempts:
                 time.sleep(min(0.25 * (2 ** (attempt - 1)), 2.0))
                 continue
-            raise CliError("Subscribr API is temporarily unreachable.", EXIT_TRANSIENT, str(error.reason)) from error
+            raise CliError(
+                f"Subscribr API is temporarily unreachable ({reason}).",
+                EXIT_TRANSIENT,
+                reason,
+            ) from error
 
     raise CliError("Subscribr API request failed.", EXIT_TRANSIENT)
 
@@ -277,6 +336,85 @@ def print_domains() -> None:
         print(f"  {domain:16s} ({count} actions)")
     print(f"\nTotal: {len(ROUTES)} operations (contract {METADATA['contract_version']})")
     print("\nUsage: subscribr <domain> <action> [--key value ...]")
+    print("\nStart here:")
+    print("  subscribr doctor                     confirm the token, base URL, and Team")
+    print("  subscribr channels list-channels     the Channel IDs most commands need")
+    print("  subscribr <domain> help              actions in one domain")
+    print("  subscribr <domain> <action> --help   required fields and an example body")
+
+
+def print_doctor() -> int:
+    """
+    First command an agent should run. Confirms where requests go, whether the
+    token works, and which Team it is bound to — before any real work fails.
+    """
+    base = api_base()
+    print(f"Base URL       {base}")
+    if base.rstrip("/") != METADATA["base_url"].rstrip("/"):
+        print(f"               (overridden; contract default is {METADATA['base_url']})")
+    print(f"CLI version    {VERSION}")
+    print(f"Contract       {METADATA['contract_version']} ({len(ROUTES)} operations)")
+
+    if not os.environ.get("SUBSCRIBR_API_TOKEN"):
+        print("Token          MISSING")
+        print(f"\nSet a Team-bound token, then run this again:\n"
+              f"  export SUBSCRIBR_API_TOKEN=...\n"
+              f"Create one at {TOKEN_PAGE_URL}")
+        return EXIT_AUTH
+
+    print("Token          present")
+    try:
+        team = request("GET", "/api/v1/team", None, {})
+    except CliError as error:
+        print(f"\nConnection     FAILED — {error}")
+        if error.detail is not None:
+            print(f"               {json.dumps(error.detail) if not isinstance(error.detail, str) else error.detail}")
+        return error.exit_code
+
+    payload = team if isinstance(team, dict) else {}
+    for envelope in ("team", "data"):
+        if isinstance(payload.get(envelope), dict):
+            payload = payload[envelope]
+            break
+
+    identity = f"Team {payload.get('id', '?')}"
+    if payload.get("name"):
+        identity += f" ({payload['name']})"
+    print(f"Connection     OK — {identity}")
+
+    role = payload.get("user_role")
+    plan = (payload.get("subscription") or {}).get("plan") if isinstance(payload.get("subscription"), dict) else None
+    if role:
+        print(f"Your role      {role}")
+    if plan:
+        print(f"Plan           {plan}")
+
+    print("\nReady. Next: subscribr channels list-channels")
+    return 0
+
+
+def field_option(name: str) -> str:
+    return name.replace("_", "-")
+
+
+def required_options(route: dict[str, Any]) -> list[str]:
+    """Every flag the caller must supply: path params first, then body fields."""
+    options = [f"--{parameter_option(name)} <value>" for name in extract_path_params(route["path"])]
+    body = route.get("body") or {}
+    for name in body.get("required", []):
+        field = (body.get("fields") or {}).get(name) or {}
+        options.append(f"--{field_option(name)} <{field.get('type', 'value')}>")
+    return options
+
+
+def optional_options(route: dict[str, Any]) -> list[str]:
+    options = [f"--{parameter_option(name)} <value>" for name in route.get("query_parameters", [])]
+    body = route.get("body") or {}
+    required = set(body.get("required", []))
+    for name, field in (body.get("fields") or {}).items():
+        if name not in required:
+            options.append(f"--{field_option(name)} <{field.get('type', 'value')}>")
+    return options
 
 
 def print_domain_help(domain: str) -> None:
@@ -286,13 +424,98 @@ def print_domain_help(domain: str) -> None:
     print(f"Subscribr CLI — {domain} actions:\n")
     for key, route in sorted(actions.items()):
         action = key.split(".", 1)[1]
-        required = " ".join(f"--{parameter_option(name)} <value>" for name in extract_path_params(route["path"]))
-        optional = " ".join(f"--{parameter_option(name)} <value>" for name in route.get("query_parameters", []))
+        required = " ".join(required_options(route))
+        optional = " ".join(optional_options(route))
         print(f"  {action:34s} {route['method']:6s} {route['path']}")
         if required:
             print(f"  {'':34s} required: {required}")
         if optional:
             print(f"  {'':34s} optional: {optional}")
+    print(f"\nField detail and an example body: subscribr {domain} <action> --help")
+
+
+def describe_constraints(field: dict[str, Any]) -> str:
+    parts = []
+    if "enum" in field:
+        parts.append("one of " + ", ".join(str(value) for value in field["enum"]))
+    parts.append(range_label("", field.get("minimum"), field.get("maximum")))
+    parts.append(range_label("length ", field.get("minLength"), field.get("maxLength")))
+    return "; ".join(part for part in parts if part)
+
+
+def range_label(prefix: str, low: Any, high: Any) -> str:
+    """`min 200`, `max 255`, or `200..255` — never a padded bound we invented."""
+    if low is None and high is None:
+        return ""
+    if low is None:
+        return f"{prefix}max {high}"
+    if high is None:
+        return f"{prefix}min {low}"
+    return f"{prefix}{low}..{high}"
+
+
+def print_action_help(domain: str, action: str) -> None:
+    """
+    Full shape of one operation. An agent that reads this can make a valid call
+    on the first attempt instead of discovering the schema through 422s.
+    """
+    key, route = resolve_route(domain, action)
+    body = route.get("body") or {}
+    fields = body.get("fields") or {}
+    required = set(body.get("required", []))
+
+    print(f"subscribr {key.replace('.', ' ', 1)}")
+    if route.get("summary"):
+        print(f"  {route['summary']}")
+    print()
+    print(f"  {route['method']} {route['path']}")
+    if route.get("abilities"):
+        print(f"  Token abilities: {', '.join(route['abilities'])}")
+
+    path_params = extract_path_params(route["path"])
+    if path_params:
+        print("\n  Path parameters (required):")
+        for name in path_params:
+            print(f"    --{parameter_option(name):28s} <value>")
+
+    if route.get("query_parameters"):
+        print("\n  Query parameters (optional):")
+        for name in route["query_parameters"]:
+            print(f"    --{parameter_option(name):28s} <value>")
+
+    if fields:
+        for label, names in (
+            ("Body fields (required)", [name for name in body.get("required", [])]),
+            ("Body fields (optional)", [name for name in fields if name not in required]),
+        ):
+            if not names:
+                continue
+            print(f"\n  {label}:")
+            for name in names:
+                field = fields[name]
+                constraints = describe_constraints(field)
+                suffix = f" [{constraints}]" if constraints else ""
+                print(f"    --{field_option(name):28s} {field.get('type', 'value')}{suffix}")
+                if field.get("description"):
+                    print(f"      {'':28s} {field['description']}")
+
+    safety = route.get("write_safety") or {}
+    if safety:
+        notes = []
+        if safety.get("idempotency") == "required":
+            notes.append("--idempotency-key is required")
+        if safety.get("concurrency") == "required":
+            notes.append("--if-match with the current strong ETag is required")
+        if safety.get("retry") == "never":
+            notes.append("never retried automatically")
+        if notes:
+            print("\n  Write safety: " + "; ".join(notes) + ".")
+
+    if body.get("example"):
+        print("\n  Example --body:")
+        for line in json.dumps(body["example"], indent=2, ensure_ascii=False).splitlines():
+            print(f"    {line}")
+        print("\n  Pass fields individually, or all at once with --body '<json>' / --body @file.json.")
 
 
 def run(args: list[str]) -> int:
@@ -302,11 +525,18 @@ def run(args: list[str]) -> int:
     if args[0] in ("version", "--version", "-V"):
         print(VERSION)
         return 0
+    if args[0] in ("doctor", "whoami"):
+        return print_doctor()
     domain = args[0]
     if len(args) < 2 or args[1] in ("help", "--help", "-h"):
         print_domain_help(domain)
         return 0
+    # Resolve before inspecting flags so an unknown command fails as a usage
+    # error rather than reaching the network.
     _, route = resolve_route(domain, args[1])
+    if any(argument in ("help", "--help", "-h") for argument in args[2:]):
+        print_action_help(domain, args[1])
+        return 0
     command_args, wait = split_transport_options(args[2:])
     if wait:
         raise CliError(

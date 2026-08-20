@@ -112,18 +112,23 @@ if (cliDestination) {
 }
 
 console.log("\n  Setup:\n");
-console.log("  1. Get a Team-bound API token at https://subscribr.com/developer");
-console.log("  2. export SUBSCRIBR_API_TOKEN=sk_live_...\n");
+console.log("  1. Get a Team-bound API token at https://subscribr.ai/integrations");
+console.log("  2. export SUBSCRIBR_API_TOKEN=...");
+console.log("  3. subscribr doctor            # confirms the token, Team, and plan\n");
 
 if (cliDestination) {
   const cli = path.relative(process.cwd(), path.join(cliDestination, "subscribr.py"));
   console.log("  CLI usage:\n");
   console.log(`  python3 ${cli} help`);
-  console.log(`  python3 ${cli} scripts create-channel-script --channel 42 --title '...'\n`);
+  console.log(`  python3 ${cli} scripts create-channel-script --help\n`);
 } else {
   console.log("  To also install the Python CLI:");
   console.log("  subscribr-install-skill --with-cli [--cli-dir directory] [--force]\n");
 }
 
-console.log("  Docs: https://subscribr.com/youtube-api");
-console.log("  API ref: curl -s https://subscribr.com/api/docs/reference/ai\n");
+console.log("  Discovery:\n");
+console.log("  subscribr help                          # domains");
+console.log("  subscribr <domain> help                 # actions and required flags");
+console.log("  subscribr <domain> <action> --help      # fields, ranges, example body\n");
+console.log("  Docs: https://subscribr.ai/youtube-api");
+console.log("  API ref: curl -s https://subscribr.ai/api/docs/reference/ai\n");

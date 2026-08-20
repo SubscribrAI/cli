@@ -138,7 +138,7 @@ class CliContractTest(unittest.TestCase):
         with patch.dict(os.environ, {"SUBSCRIBR_API_TOKEN": "secret"}, clear=True):
             headers = subscribr.get_headers()
         self.assertEqual("Bearer secret", headers["Authorization"])
-        self.assertEqual("subscribr-cli/2.0.0", headers["User-Agent"])
+        self.assertEqual(f"subscribr-cli/{subscribr.VERSION}", headers["User-Agent"])
 
     def test_body_can_be_loaded_from_json_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as handle:
@@ -176,7 +176,7 @@ class CliContractTest(unittest.TestCase):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             self.assertEqual(0, subscribr.run(["version"]))
-        self.assertEqual("2.0.0\n", stdout.getvalue())
+        self.assertEqual(f"{subscribr.VERSION}\n", stdout.getvalue())
 
         stdout = io.StringIO()
         with redirect_stdout(stdout):
@@ -211,6 +211,177 @@ class CliContractTest(unittest.TestCase):
             self.assertIn("revision", document)
         self.assertIn("Subscribr Video capability, Channel, and custom-asset reads", skill)
 
+
+
+class AgentDiscoveryTest(unittest.TestCase):
+    """
+    An agent must be able to learn an operation's shape locally. Everything
+    here has to work without touching the network.
+    """
+
+    WRITE = "scripts.create-channel-script"
+
+    def domain_and_action(self):
+        return self.WRITE.split(".", 1)
+
+    def test_the_canonical_base_url_is_the_domain_we_control(self):
+        """
+        `subscribr.com` is a parked third-party domain. Shipping it as the
+        default sent every customer bearer token off-platform.
+        """
+        self.assertEqual("https://subscribr.ai", subscribr.METADATA["base_url"])
+        self.assertNotIn("subscribr.com", json.dumps(subscribr.METADATA))
+
+    def test_token_guidance_points_at_a_host_we_control(self):
+        self.assertTrue(subscribr.TOKEN_PAGE_URL.startswith("https://subscribr.ai/"))
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.get_headers()
+        self.assertIn(subscribr.TOKEN_PAGE_URL, str(raised.exception))
+
+    def test_domain_help_lists_required_body_fields_for_writes(self):
+        domain, action = self.domain_and_action()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run([domain, "help"]))
+        output = stdout.getvalue()
+
+        # Path param and the three body fields the server actually requires.
+        for flag in ("--channel", "--title", "--topic", "--length"):
+            self.assertIn(flag, output)
+
+    def test_action_help_describes_fields_without_making_a_request(self):
+        domain, action = self.domain_and_action()
+        stdout = io.StringIO()
+        with patch.object(subscribr, "request", side_effect=AssertionError("help must not call the API")):
+            with redirect_stdout(stdout):
+                self.assertEqual(0, subscribr.run([domain, action, "--help"]))
+        output = stdout.getvalue()
+
+        self.assertIn("Body fields (required)", output)
+        self.assertIn("Body fields (optional)", output)
+        self.assertIn("Token abilities: scripts:write", output)
+        self.assertIn("Example --body:", output)
+
+    def test_action_help_is_not_sent_as_a_request_field(self):
+        """`--help` used to become a body field and reach the server."""
+        domain, action = self.domain_and_action()
+        with patch.object(subscribr, "request", side_effect=AssertionError("help must not call the API")):
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(0, subscribr.run([domain, action, "-h"]))
+
+    def test_unknown_action_fails_as_usage_before_reaching_the_network(self):
+        with patch.object(subscribr, "request", side_effect=AssertionError("must not call the API")):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.run(["scripts", "invent-a-route", "--help"])
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
+
+    def test_required_options_cover_path_params_then_required_body_fields(self):
+        route = subscribr.ROUTES[self.WRITE]
+
+        self.assertEqual(
+            ["--channel <value>", "--title <string>", "--topic <string>", "--length <integer>"],
+            subscribr.required_options(route),
+        )
+
+    def test_optional_options_exclude_required_body_fields(self):
+        route = subscribr.ROUTES[self.WRITE]
+        optional = subscribr.optional_options(route)
+
+        self.assertIn("--voice-id <integer>", optional)
+        self.assertNotIn("--title <string>", optional)
+
+    def test_range_labels_never_invent_a_bound(self):
+        self.assertEqual("max 255", subscribr.range_label("", None, 255))
+        self.assertEqual("min 1", subscribr.range_label("", 1, None))
+        self.assertEqual("50..20000", subscribr.range_label("", 50, 20000))
+        self.assertEqual("", subscribr.range_label("", None, None))
+
+    def test_doctor_reports_the_bound_team_from_the_real_envelope(self):
+        payload = {"team": {
+            "id": 7,
+            "name": "Acme",
+            "user_role": "owner",
+            "subscription": {"plan": "Automation"},
+        }}
+        stdout = io.StringIO()
+        with patch.dict(os.environ, {"SUBSCRIBR_API_TOKEN": "t"}, clear=True), \
+                patch.object(subscribr, "request", return_value=payload), \
+                redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run(["doctor"]))
+        output = stdout.getvalue()
+
+        self.assertIn("Team 7 (Acme)", output)
+        self.assertIn("owner", output)
+        self.assertIn("Automation", output)
+
+    def test_doctor_without_a_token_explains_the_fix_and_never_calls_the_api(self):
+        stdout = io.StringIO()
+        with patch.dict(os.environ, {}, clear=True), \
+                patch.object(subscribr, "request", side_effect=AssertionError("must not call the API")), \
+                redirect_stdout(stdout):
+            self.assertEqual(subscribr.EXIT_AUTH, subscribr.run(["doctor"]))
+        output = stdout.getvalue()
+
+        self.assertIn("Token          MISSING", output)
+        self.assertIn(subscribr.TOKEN_PAGE_URL, output)
+
+    def test_doctor_surfaces_the_underlying_failure_reason(self):
+        error = subscribr.CliError("Cannot reach x: bad cert", subscribr.EXIT_TRANSIENT, "bad cert")
+        stdout = io.StringIO()
+        with patch.dict(os.environ, {"SUBSCRIBR_API_TOKEN": "t"}, clear=True), \
+                patch.object(subscribr, "request", side_effect=error), \
+                redirect_stdout(stdout):
+            self.assertEqual(subscribr.EXIT_TRANSIENT, subscribr.run(["doctor"]))
+
+        self.assertIn("bad cert", stdout.getvalue())
+
+
+class TransportTrustTest(unittest.TestCase):
+    def test_production_uses_the_system_trust_store(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(subscribr.ssl_context())
+
+    def test_a_missing_ca_bundle_is_a_usage_error(self):
+        with patch.dict(os.environ, {"SUBSCRIBR_CA_BUNDLE": "/nope/missing.pem"}, clear=True):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.ssl_context()
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
+
+    def test_certificate_and_dns_failures_are_not_treated_as_transient(self):
+        import socket as socket_module
+        import ssl as ssl_module
+
+        self.assertTrue(subscribr.permanent_network_failure(ssl_module.SSLError("boom")))
+        self.assertTrue(subscribr.permanent_network_failure(socket_module.gaierror("boom")))
+        self.assertTrue(subscribr.permanent_network_failure("CERTIFICATE_VERIFY_FAILED"))
+        self.assertFalse(subscribr.permanent_network_failure("connection reset by peer"))
+
+    def test_a_certificate_failure_reports_the_reason_and_does_not_retry(self):
+        attempts = []
+
+        def urlopen(request, timeout=None, context=None):
+            attempts.append(request)
+            raise urllib.error.URLError("[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed")
+
+        with patch.dict(os.environ, {"SUBSCRIBR_API_TOKEN": "t"}, clear=True), \
+                patch("urllib.request.urlopen", urlopen):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request("GET", "/api/v1/team")
+
+        self.assertEqual(1, len(attempts), "a certificate failure must not be retried")
+        self.assertIn("CERTIFICATE_VERIFY_FAILED", str(raised.exception))
+
+
+class PackagingTest(unittest.TestCase):
+    def test_declared_versions_stay_in_lockstep(self):
+        """package.json, plugin.json, and the CLI must agree, or `doctor` and the
+        User-Agent report a version the registry never published."""
+        package = json.loads((ROOT / "package.json").read_text())
+        plugin = json.loads((ROOT / "plugin.json").read_text())
+
+        self.assertEqual(subscribr.VERSION, package["version"])
+        self.assertEqual(subscribr.VERSION, plugin["version"])
 
 class RequestTest(unittest.TestCase):
     def setUp(self):

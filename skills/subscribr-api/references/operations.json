@@ -1,6 +1,6 @@
 {
   "_generated": "DO NOT EDIT: generated from openapi/subscribr-v1.json",
-  "base_url": "https://subscribr.com",
+  "base_url": "https://subscribr.ai",
   "contract_version": "1.0.0",
   "manifest_version": "1.0.0",
   "operations": {
@@ -8,10 +8,26 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [
+          "identifier"
+        ],
+        "fields": {
+          "identifier": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "body_required": true,
+        "example": {
+          "identifier": "https://www.youtube.com/@competitor"
+        }
+      },
       "method": "POST",
       "operation_id": "addChannelCompetitor",
       "path": "/api/v1/channels/{channel}/competitors",
       "query_parameters": [],
+      "summary": "Add Channel Competitor",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -22,10 +38,12 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "DELETE",
       "operation_id": "deleteChannelCompetitor",
       "path": "/api/v1/channels/{channel}/competitors/{competitor}",
       "query_parameters": [],
+      "summary": "Delete Channel Competitor",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -36,26 +54,31 @@
       "abilities": [
         "channels:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getChannel",
       "path": "/api/v1/channels/{channel}",
       "query_parameters": [],
+      "summary": "Get Channel",
       "write_safety": null
     },
     "channels.list-channel-competitors": {
       "abilities": [
         "channels:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannelCompetitors",
       "path": "/api/v1/channels/{channel}/competitors",
       "query_parameters": [],
+      "summary": "List Channel Competitors",
       "write_safety": null
     },
     "channels.list-channels": {
       "abilities": [
         "channels:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannels",
       "path": "/api/v1/channels",
@@ -64,16 +87,34 @@
         "per_page",
         "page"
       ],
+      "summary": "List Channels",
       "write_safety": null
     },
     "ideas.change-idea-topic": {
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [
+          "topic"
+        ],
+        "fields": {
+          "topic": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 5000
+          }
+        },
+        "body_required": true,
+        "example": {
+          "topic": "Instead of productivity apps, apply this to morning routines"
+        }
+      },
       "method": "POST",
       "operation_id": "changeIdeaTopic",
       "path": "/api/v1/ideas/{idea}/change-topic",
       "query_parameters": [],
+      "summary": "Change Idea Topic",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -84,10 +125,57 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [
+          "title"
+        ],
+        "fields": {
+          "angle": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "suggested_length": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 20000
+          },
+          "suggested_template_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "thumbnail_concept": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        },
+        "body_required": true,
+        "example": {
+          "title": "Why Apple's AI Changes Everything",
+          "topic": "Analysis of Apple Intelligence",
+          "angle": "Reveal the hidden implication that most reviews miss.",
+          "suggested_length": 1200,
+          "suggested_template_id": 22,
+          "thumbnail_concept": "Split-screen before/after with bold headline",
+          "notes": "Focus on practical consequences."
+        }
+      },
       "method": "POST",
       "operation_id": "createChannelIdea",
       "path": "/api/v1/channels/{channel}/ideas",
       "query_parameters": [],
+      "summary": "Create Channel Idea",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -98,10 +186,25 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "body_required": true,
+        "example": {
+          "count": 10
+        }
+      },
       "method": "POST",
       "operation_id": "generateChannelIdeas",
       "path": "/api/v1/channels/{channel}/ideas/generate",
       "query_parameters": [],
+      "summary": "Generate Channel Ideas",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -112,10 +215,34 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "channel_handle": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "channel_id": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "body_required": true,
+        "example": {
+          "channel_handle": "@mkbhd",
+          "count": 10
+        }
+      },
       "method": "POST",
       "operation_id": "generateIdeasFromChannel",
       "path": "/api/v1/channels/{channel}/ideas/generate-from-channel",
       "query_parameters": [],
+      "summary": "Generate Ideas From Channel",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -126,10 +253,34 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "video_id": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "video_url": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "body_required": true,
+        "example": {
+          "video_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+          "count": 10
+        }
+      },
       "method": "POST",
       "operation_id": "generateIdeasFromVideo",
       "path": "/api/v1/channels/{channel}/ideas/generate-from-video",
       "query_parameters": [],
+      "summary": "Generate Ideas From Video",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -140,16 +291,19 @@
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getIdea",
       "path": "/api/v1/ideas/{idea}",
       "query_parameters": [],
+      "summary": "Get Idea",
       "write_safety": null
     },
     "ideas.list-channel-ideas": {
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannelIdeas",
       "path": "/api/v1/channels/{channel}/ideas",
@@ -160,16 +314,19 @@
         "per_page",
         "page"
       ],
+      "summary": "List Channel Ideas",
       "write_safety": null
     },
     "ideas.write-idea": {
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "writeIdea",
       "path": "/api/v1/ideas/{idea}/write",
       "query_parameters": [],
+      "summary": "Write Idea",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -180,6 +337,51 @@
       "abilities": [
         "intel:write"
       ],
+      "body": {
+        "required": [
+          "type",
+          "external_id",
+          "title",
+          "url"
+        ],
+        "fields": {
+          "external_id": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "tags": {
+            "type": "string[]"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "channel",
+              "video"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "type": "channel",
+          "external_id": "UCBJycsmduvYEL83R_U4JriQ",
+          "title": "Competitor: MKBHD",
+          "url": "https://youtube.com/@mkbhd",
+          "notes": "Strong format",
+          "tags": [
+            "competitor"
+          ]
+        }
+      },
       "method": "POST",
       "operation_id": "createIntelBookmark",
       "path": "/api/v1/intel/bookmarks",
@@ -187,6 +389,7 @@
         "page",
         "bookmark"
       ],
+      "summary": "Create Intel Bookmark",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -197,10 +400,12 @@
       "abilities": [
         "intel:write"
       ],
+      "body": null,
       "method": "DELETE",
       "operation_id": "deleteIntelBookmark",
       "path": "/api/v1/intel/bookmarks/{bookmark}",
       "query_parameters": [],
+      "summary": "Delete Intel Bookmark",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -211,6 +416,7 @@
       "abilities": [
         "intel:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listIntelBookmarks",
       "path": "/api/v1/intel/bookmarks",
@@ -218,16 +424,35 @@
         "page",
         "bookmark"
       ],
+      "summary": "List Intel Bookmarks",
       "write_safety": null
     },
     "intel.lookup-intel-channel": {
       "abilities": [
         "intel:read"
       ],
+      "body": {
+        "required": [
+          "identifiers"
+        ],
+        "fields": {
+          "identifiers": {
+            "type": "string[]"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "identifiers": [
+            "@mkbhd",
+            "UCBJycsmduvYEL83R_U4JriQ"
+          ]
+        }
+      },
       "method": "POST",
       "operation_id": "lookupIntelChannel",
       "path": "/api/v1/intel/channels/lookup",
       "query_parameters": [],
+      "summary": "Lookup Intel Channel",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -238,10 +463,28 @@
       "abilities": [
         "intel:read"
       ],
+      "body": {
+        "required": [
+          "identifiers"
+        ],
+        "fields": {
+          "identifiers": {
+            "type": "string[]"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "identifiers": [
+            "dQw4w9WgXcQ",
+            "https://youtube.com/watch?v=abc123"
+          ]
+        }
+      },
       "method": "POST",
       "operation_id": "lookupIntelVideo",
       "path": "/api/v1/intel/videos/lookup",
       "query_parameters": [],
+      "summary": "Lookup Intel Video",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -252,10 +495,33 @@
       "abilities": [
         "intel:read"
       ],
+      "body": {
+        "required": [
+          "query"
+        ],
+        "fields": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "body_required": true,
+        "example": {
+          "query": "tech reviews",
+          "limit": 10
+        }
+      },
       "method": "POST",
       "operation_id": "searchIntelChannels",
       "path": "/api/v1/intel/channels/search",
       "query_parameters": [],
+      "summary": "Search Intel Channels",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -266,10 +532,33 @@
       "abilities": [
         "intel:read"
       ],
+      "body": {
+        "required": [
+          "query"
+        ],
+        "fields": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "body_required": true,
+        "example": {
+          "query": "iPhone 15 review",
+          "limit": 20
+        }
+      },
       "method": "POST",
       "operation_id": "searchIntelVideos",
       "path": "/api/v1/intel/videos/search",
       "query_parameters": [],
+      "summary": "Search Intel Videos",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -280,20 +569,24 @@
       "abilities": [
         "operations:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getOperation",
       "path": "/api/v1/operations/{operation}",
       "query_parameters": [],
+      "summary": "Get an asynchronous operation",
       "write_safety": null
     },
     "projects.archive-project": {
       "abilities": [
         "projects:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "archiveProject",
       "path": "/api/v1/projects/{project}/archive",
       "query_parameters": [],
+      "summary": "Archive Project",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -304,10 +597,12 @@
       "abilities": [
         "projects:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "createProject",
       "path": "/api/v1/projects",
       "query_parameters": [],
+      "summary": "Create Project",
       "write_safety": {
         "concurrency": "optional",
         "idempotency": "required",
@@ -318,10 +613,31 @@
       "abilities": [
         "projects:write"
       ],
+      "body": {
+        "required": [
+          "body"
+        ],
+        "fields": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "mentioned_user_ids": {
+            "type": "integer[]"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "body": "Ready for review.",
+          "mentioned_user_ids": []
+        }
+      },
       "method": "POST",
       "operation_id": "createProjectComment",
       "path": "/api/v1/projects/{project}/comments",
       "query_parameters": [],
+      "summary": "Create Project comment",
       "write_safety": {
         "concurrency": "optional",
         "idempotency": "required",
@@ -332,58 +648,69 @@
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getProject",
       "path": "/api/v1/projects/{project}",
       "query_parameters": [
         "expand"
       ],
+      "summary": "Get Project",
       "write_safety": null
     },
     "projects.get-project-production": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getProjectProduction",
       "path": "/api/v1/projects/{project}/production",
       "query_parameters": [],
+      "summary": "Get Project production metadata",
       "write_safety": null
     },
     "projects.list-project-activity": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjectActivity",
       "path": "/api/v1/projects/{project}/activity",
       "query_parameters": [],
+      "summary": "List Project activity",
       "write_safety": null
     },
     "projects.list-project-attachments": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjectAttachments",
       "path": "/api/v1/projects/{project}/attachments",
       "query_parameters": [],
+      "summary": "List Project attachment metadata",
       "write_safety": null
     },
     "projects.list-project-comments": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjectComments",
       "path": "/api/v1/projects/{project}/comments",
       "query_parameters": [],
+      "summary": "List Project comments",
       "write_safety": null
     },
     "projects.list-project-notifications": {
       "abilities": [
         "notifications:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjectNotifications",
       "path": "/api/v1/project-notifications",
@@ -391,12 +718,14 @@
         "limit",
         "unread"
       ],
+      "summary": "List Project notifications",
       "write_safety": null
     },
     "projects.list-project-tasks": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjectTasks",
       "path": "/api/v1/tasks",
@@ -404,12 +733,14 @@
         "limit",
         "overdue"
       ],
+      "summary": "List assigned Project tasks",
       "write_safety": null
     },
     "projects.list-projects": {
       "abilities": [
         "projects:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listProjects",
       "path": "/api/v1/projects",
@@ -420,16 +751,44 @@
         "limit",
         "expand"
       ],
+      "summary": "List Projects",
       "write_safety": null
     },
     "projects.move-project": {
       "abilities": [
         "projects:write"
       ],
+      "body": {
+        "required": [
+          "stage"
+        ],
+        "fields": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "new",
+              "considering",
+              "needs_script",
+              "scripting",
+              "recording",
+              "thumbnail",
+              "video_gen",
+              "video_ready",
+              "upload"
+            ],
+            "description": "Idea references accept only new, considering, or needs_script. Script references accept only scripting, recording, thumbnail, video_gen, video_ready, or upload. Recording is rejected when disabled for the channel."
+          }
+        },
+        "body_required": true,
+        "example": {
+          "stage": "considering"
+        }
+      },
       "method": "POST",
       "operation_id": "moveProject",
       "path": "/api/v1/projects/{project}/move",
       "query_parameters": [],
+      "summary": "Move Project",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -440,10 +799,32 @@
       "abilities": [
         "projects:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "scripting",
+              "recording",
+              "thumbnail",
+              "video_gen",
+              "video_ready",
+              "upload"
+            ],
+            "description": "The recording destination is rejected when the Project channel has recording disabled."
+          }
+        },
+        "body_required": false,
+        "example": {
+          "stage": "scripting"
+        }
+      },
       "method": "POST",
       "operation_id": "promoteProject",
       "path": "/api/v1/projects/{project}/promote",
       "query_parameters": [],
+      "summary": "Promote idea Project",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -454,10 +835,12 @@
       "abilities": [
         "notifications:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "readAllProjectNotifications",
       "path": "/api/v1/project-notifications/read-all",
       "query_parameters": [],
+      "summary": "Mark all Project notifications read",
       "write_safety": {
         "concurrency": "optional",
         "idempotency": "required",
@@ -468,10 +851,12 @@
       "abilities": [
         "notifications:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "readProjectNotification",
       "path": "/api/v1/project-notifications/{notification}/read",
       "query_parameters": [],
+      "summary": "Mark one Project notification read",
       "write_safety": {
         "concurrency": "optional",
         "idempotency": "required",
@@ -482,10 +867,12 @@
       "abilities": [
         "projects:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "restoreProject",
       "path": "/api/v1/projects/{project}/restore",
       "query_parameters": [],
+      "summary": "Restore Project",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -496,10 +883,29 @@
       "abilities": [
         "projects:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "angle": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "title": "Updated title"
+        }
+      },
       "method": "PATCH",
       "operation_id": "updateProject",
       "path": "/api/v1/projects/{project}",
       "query_parameters": [],
+      "summary": "Update Project",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -510,10 +916,58 @@
       "abilities": [
         "projects:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "checklist": {
+            "type": "object[]"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "made_for_kids": {
+            "type": "boolean"
+          },
+          "mark_scheduled": {
+            "type": "boolean"
+          },
+          "publish_at": {
+            "type": "string"
+          },
+          "request_thumbnail_review": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "string[]"
+          },
+          "thumbnail_text": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ]
+          }
+        },
+        "body_required": true,
+        "example": {
+          "description": "Ready to upload.",
+          "tags": [
+            "tutorial"
+          ],
+          "visibility": "unlisted"
+        }
+      },
       "method": "PATCH",
       "operation_id": "updateProjectProduction",
       "path": "/api/v1/projects/{project}/production",
       "query_parameters": [],
+      "summary": "Update Project production metadata",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -524,10 +978,12 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "cancelScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/runs/{run}/cancel",
       "query_parameters": [],
+      "summary": "Cancel Script Agent Run",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -538,10 +994,83 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [
+          "title",
+          "topic",
+          "length"
+        ],
+        "fields": {
+          "angle": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 20000,
+            "description": "Target script length in words. Minimum is 200 for standard templates; 50 for shorts_* templates (30-60 second content)."
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "research_texts": {
+            "type": "string[]"
+          },
+          "research_urls": {
+            "type": "string[]"
+          },
+          "template_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "topic": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 5000
+          },
+          "voice": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "voice_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "body_required": true,
+        "example": {
+          "title": "Why Apple's AI Changes Everything",
+          "topic": "Break down the key changes in Apple Intelligence and what they mean.",
+          "length": 1200,
+          "angle": "Explain the hidden implication most reviews miss",
+          "voice_id": 55,
+          "voice": "neutral",
+          "language": "English",
+          "template_id": 22,
+          "research_urls": [
+            "https://example.com/source-1"
+          ],
+          "research_texts": [
+            "Key bullet points"
+          ],
+          "prompt": "Custom starting prompt"
+        }
+      },
       "method": "POST",
       "operation_id": "createChannelScript",
       "path": "/api/v1/channels/{channel}/scripts",
       "query_parameters": [],
+      "summary": "Create Channel Script",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -552,6 +1081,7 @@
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "exportScript",
       "path": "/api/v1/scripts/{script}/export",
@@ -559,16 +1089,19 @@
         "format",
         "include_headings"
       ],
+      "summary": "Export Script",
       "write_safety": null
     },
     "scripts.generate-script": {
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "generateScript",
       "path": "/api/v1/scripts/{script}/script/generate",
       "query_parameters": [],
+      "summary": "Generate Script",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -579,10 +1112,12 @@
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "generateScriptOutline",
       "path": "/api/v1/scripts/{script}/outline/generate",
       "query_parameters": [],
+      "summary": "Generate Script Outline",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -593,40 +1128,48 @@
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getScript",
       "path": "/api/v1/scripts/{script}",
       "query_parameters": [],
+      "summary": "Get Script",
       "write_safety": null
     },
     "scripts.get-script-agent-run": {
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/runs/{run}",
       "query_parameters": [],
+      "summary": "Get Script Agent Run",
       "write_safety": null
     },
     "scripts.get-script-content": {
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getScriptContent",
       "path": "/api/v1/scripts/{script}/content",
       "query_parameters": [],
+      "summary": "Get Script Content",
       "write_safety": null
     },
     "scripts.humanize-script": {
       "abilities": [
         "scripts:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "humanizeScript",
       "path": "/api/v1/scripts/{script}/script/humanize",
       "query_parameters": [],
+      "summary": "Humanize Script",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -637,6 +1180,7 @@
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannelScripts",
       "path": "/api/v1/channels/{channel}/scripts",
@@ -647,28 +1191,74 @@
         "per_page",
         "page"
       ],
+      "summary": "List Channel Scripts",
       "write_safety": null
     },
     "scripts.poll-script-generation": {
       "abilities": [
         "scripts:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "pollScriptGeneration",
       "path": "/api/v1/scripts/{script}/generate/poll",
       "query_parameters": [
         "run_id"
       ],
+      "summary": "Poll Script Generation",
       "write_safety": null
     },
     "scripts.start-script-agent-run": {
       "abilities": [
         "scripts:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "model": {
+            "type": "string",
+            "enum": [
+              "kimi_k26",
+              "minimax_m27",
+              "glm_51",
+              "claude_haiku_45",
+              "claude_sonnet_46",
+              "claude_opus_48",
+              "claude_fable_5",
+              "gpt55",
+              "gpt54",
+              "gpt54_mini"
+            ]
+          },
+          "research": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "on",
+              "off",
+              "deep_research"
+            ]
+          },
+          "visual_cues": {
+            "type": "string",
+            "enum": [
+              "off",
+              "on"
+            ]
+          }
+        },
+        "body_required": false,
+        "example": {
+          "model": "minimax_m27",
+          "research": "deep_research",
+          "visual_cues": "on"
+        }
+      },
       "method": "POST",
       "operation_id": "startScriptAgentRun",
       "path": "/api/v1/scripts/{script}/agent/generate",
       "query_parameters": [],
+      "summary": "Start Script Agent Run",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -679,10 +1269,35 @@
       "abilities": [
         "tokens:manage"
       ],
+      "body": {
+        "required": [
+          "name",
+          "abilities"
+        ],
+        "fields": {
+          "abilities": {
+            "type": "string[]"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "Automation Token",
+          "abilities": [
+            "intel:read",
+            "scripts:read",
+            "channels:read"
+          ]
+        }
+      },
       "method": "POST",
       "operation_id": "createApiToken",
       "path": "/api/v1/team/tokens",
       "query_parameters": [],
+      "summary": "Create Api Token",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -693,10 +1308,12 @@
       "abilities": [
         "tokens:manage"
       ],
+      "body": null,
       "method": "DELETE",
       "operation_id": "deleteApiToken",
       "path": "/api/v1/team/tokens/{token}",
       "query_parameters": [],
+      "summary": "Delete Api Token",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -705,38 +1322,46 @@
     },
     "team.get-team": {
       "abilities": [],
+      "body": null,
       "method": "GET",
       "operation_id": "getTeam",
       "path": "/api/v1/team",
       "query_parameters": [],
+      "summary": "Get Team",
       "write_safety": null
     },
     "team.get-team-credits": {
       "abilities": [],
+      "body": null,
       "method": "GET",
       "operation_id": "getTeamCredits",
       "path": "/api/v1/team/credits",
       "query_parameters": [],
+      "summary": "Get Team Credits",
       "write_safety": null
     },
     "team.list-api-tokens": {
       "abilities": [
         "tokens:manage"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listApiTokens",
       "path": "/api/v1/team/tokens",
       "query_parameters": [],
+      "summary": "List Api Tokens",
       "write_safety": null
     },
     "templates.archive-template": {
       "abilities": [
         "templates:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "archiveTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}/archive",
       "query_parameters": [],
+      "summary": "Archive a custom Channel template",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -747,10 +1372,39 @@
       "abilities": [
         "templates:write"
       ],
+      "body": {
+        "required": [
+          "name",
+          "prompt"
+        ],
+        "fields": {
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 100,
+            "maxLength": 20000
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "My explainer",
+          "description": "A concise teaching format.",
+          "prompt": "Write a clear, structured explainer with a compelling opening, concrete examples, and a concise conclusion for the target audience."
+        }
+      },
       "method": "POST",
       "operation_id": "createTemplate",
       "path": "/api/v1/channels/{channel}/templates",
       "query_parameters": [],
+      "summary": "Create a custom Channel template",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "required",
@@ -761,32 +1415,38 @@
       "abilities": [
         "templates:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}",
       "query_parameters": [],
+      "summary": "Get a custom Channel template",
       "write_safety": null
     },
     "templates.list-channel-templates": {
       "abilities": [
         "templates:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannelTemplates",
       "path": "/api/v1/channels/{channel}/templates",
       "query_parameters": [
         "include_archived"
       ],
+      "summary": "List built-in and custom Channel templates",
       "write_safety": null
     },
     "templates.restore-template": {
       "abilities": [
         "templates:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "restoreTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}/restore",
       "query_parameters": [],
+      "summary": "Restore an archived custom Channel template",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -797,10 +1457,34 @@
       "abilities": [
         "templates:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 100,
+            "maxLength": 20000
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "My revised explainer"
+        }
+      },
       "method": "PATCH",
       "operation_id": "updateTemplate",
       "path": "/api/v1/channels/{channel}/templates/{template}",
       "query_parameters": [],
+      "summary": "Update a custom Channel template",
       "write_safety": {
         "concurrency": "required",
         "idempotency": "required",
@@ -812,10 +1496,72 @@
         "scripts:write",
         "thumbnails:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "callback_secret": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "callback_url": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "Must use HTTPS and resolve to a public, non-reserved host; redirects and DNS resolution are revalidated server-side."
+          },
+          "clone_strategy": {
+            "type": "string",
+            "enum": [
+              "direct_reference",
+              "style_analysis",
+              null
+            ]
+          },
+          "feedback": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "idea_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "improvement_mode": {
+            "type": "boolean"
+          },
+          "num_variations": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "reference_image_url": {
+            "type": "string",
+            "description": "Must use HTTPS."
+          },
+          "reference_variation_url": {
+            "type": "string",
+            "description": "Must use HTTPS."
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "body_required": true,
+        "example": {
+          "idea_id": 42,
+          "num_variations": 3,
+          "callback_url": "https://partner.example.com/subscribr/thumbnail-callback",
+          "callback_secret": "whsec_thumbnail_partner_secret"
+        }
+      },
       "method": "POST",
       "operation_id": "createThumbnailGeneration",
       "path": "/api/v1/channels/{channel}/thumbnails/generations",
       "query_parameters": [],
+      "summary": "Create Thumbnail Generation",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -827,10 +1573,12 @@
         "scripts:read",
         "thumbnails:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getThumbnailGeneration",
       "path": "/api/v1/channels/{channel}/thumbnails/generations/{runId}",
       "query_parameters": [],
+      "summary": "Get Thumbnail Generation",
       "write_safety": null
     },
     "thumbnails.get-thumbnail-usage": {
@@ -838,10 +1586,12 @@
         "scripts:read",
         "thumbnails:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getThumbnailUsage",
       "path": "/api/v1/team/thumbnails/usage",
       "query_parameters": [],
+      "summary": "Get Thumbnail Usage",
       "write_safety": null
     },
     "thumbnails.list-thumbnail-generations": {
@@ -849,6 +1599,7 @@
         "scripts:read",
         "thumbnails:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listThumbnailGenerations",
       "path": "/api/v1/channels/{channel}/thumbnails/generations",
@@ -856,52 +1607,62 @@
         "source_type",
         "page"
       ],
+      "summary": "List Thumbnail Generations",
       "write_safety": null
     },
     "video.get-avatar": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoGetAvatar",
       "path": "/api/v1/video/avatars/{avatar}",
       "query_parameters": [],
+      "summary": "Get a custom avatar available to the current team",
       "write_safety": null
     },
     "video.get-channel": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoGetChannel",
       "path": "/api/v1/video/channels/{videoChannel}",
       "query_parameters": [],
+      "summary": "Get a Subscribr Video channel for the current team",
       "write_safety": null
     },
     "video.get-media-asset": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoGetMediaAsset",
       "path": "/api/v1/video/media-assets/{mediaAsset}",
       "query_parameters": [],
+      "summary": "Get reference media available to the current team",
       "write_safety": null
     },
     "video.get-voice": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoGetVoice",
       "path": "/api/v1/video/voices/{voice}",
       "query_parameters": [],
+      "summary": "Get a custom voice available to the current team",
       "write_safety": null
     },
     "video.list-avatars": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoListAvatars",
       "path": "/api/v1/video/avatars",
@@ -909,32 +1670,38 @@
         "page",
         "per_page"
       ],
+      "summary": "List custom avatars available to the current team",
       "write_safety": null
     },
     "video.list-capabilities": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoListCapabilities",
       "path": "/api/v1/video/capabilities",
       "query_parameters": [],
+      "summary": "List available Subscribr Video capabilities",
       "write_safety": null
     },
     "video.list-channels": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoListChannels",
       "path": "/api/v1/video/channels",
       "query_parameters": [],
+      "summary": "List Subscribr Video channels for the current team",
       "write_safety": null
     },
     "video.list-media-assets": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoListMediaAssets",
       "path": "/api/v1/video/media-assets",
@@ -942,12 +1709,14 @@
         "page",
         "per_page"
       ],
+      "summary": "List reference media available to the current team",
       "write_safety": null
     },
     "video.list-voices": {
       "abilities": [
         "video:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "videoListVoices",
       "path": "/api/v1/video/voices",
@@ -955,16 +1724,136 @@
         "page",
         "per_page"
       ],
+      "summary": "List custom voices available to the current team",
       "write_safety": null
     },
     "voices.commit-voice-profile": {
       "abilities": [
         "voices:write"
       ],
+      "body": {
+        "required": [
+          "receipt",
+          "profile"
+        ],
+        "fields": {
+          "profile": {
+            "type": "value"
+          },
+          "receipt": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 160
+          }
+        },
+        "body_required": true,
+        "example": {
+          "receipt": "vr2.current.opaque-token",
+          "profile": {
+            "writing_style_analysis": {
+              "speaker_archetype": {
+                "label": "Practical guide",
+                "description": "Calm expert.",
+                "axes": {
+                  "age_vibe": "experienced peer",
+                  "profession_archetype": "strategist",
+                  "temperament": "calm",
+                  "authority_posture": "confident"
+                }
+              },
+              "stance_and_relationship": {
+                "narrative_person": "second person",
+                "intimacy_distance": "trusted peer",
+                "certainty_level": "Names uncertainty.",
+                "audience_model": "Experienced creators."
+              },
+              "delivery_recipe": {
+                "cadence": "Short claims.",
+                "energy": "Warm.",
+                "pacing_and_emphasis": [
+                  "Front-load the point."
+                ]
+              },
+              "rhetorical_toolkit": {
+                "hook_patterns": [
+                  "Open with a misconception."
+                ],
+                "transitions": [
+                  "Here is the useful part."
+                ],
+                "explanation_patterns": [
+                  "Make it concrete."
+                ],
+                "storytelling_patterns": [
+                  "Start at the decision."
+                ],
+                "cta_patterns": [],
+                "analogy_and_evidence": "Use one analogy.",
+                "humor_and_empathy": "Keep humor light."
+              },
+              "diction_and_syntax": {
+                "vocabulary_level": "conversational",
+                "word_complexity": "Prefer short words.",
+                "sentence_shape": "Mix short and medium sentences.",
+                "preferred_constructions": [
+                  "Here is the tradeoff."
+                ],
+                "avoid": [
+                  "Empty jargon."
+                ]
+              },
+              "phrase_kit": {
+                "uses": [],
+                "avoid": [],
+                "replacements": []
+              },
+              "jargon_policy": {
+                "allow": [],
+                "explain_with": [
+                  "a tiny example"
+                ]
+              },
+              "formatting_directives": [
+                "Use short paragraphs."
+              ],
+              "do_dont": {
+                "do": [
+                  "Lead with value."
+                ],
+                "dont": [
+                  "Invent facts."
+                ],
+                "never_does": [
+                  "Hide uncertainty."
+                ]
+              },
+              "locale_and_dialect": "Natural American English.",
+              "thinking_style": "Test conclusions against evidence.",
+              "spoken_patterns": {
+                "common_phrases": [],
+                "starter_words": [],
+                "transition_phrases": []
+              },
+              "rewriter_directives": [
+                "Address the listener as you."
+              ],
+              "adherence_checklist": [
+                "No invented specifics."
+              ],
+              "lexical_glossary": [],
+              "example_paragraph": "Start with the decision your viewer needs to make. Then give them only the evidence that changes it.",
+              "style_examples": [
+                "Start with the decision your viewer needs to make. Then build the explanation around the evidence that changes that decision."
+              ]
+            }
+          }
+        }
+      },
       "method": "POST",
       "operation_id": "commitVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/commit",
       "query_parameters": [],
+      "summary": "Commit an exactly validated Voice Profile receipt",
       "write_safety": {
         "concurrency": "optional",
         "idempotency": "required",
@@ -975,30 +1864,165 @@
       "abilities": [
         "voices:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/{voice}",
       "query_parameters": [],
+      "summary": "Get a Channel Voice Profile",
       "write_safety": null
     },
     "voices.list-channel-voices": {
       "abilities": [
         "voices:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listChannelVoices",
       "path": "/api/v1/channels/{channel}/voices",
       "query_parameters": [],
+      "summary": "List Channel Voices",
       "write_safety": null
     },
     "voices.validate-voice-profile": {
       "abilities": [
         "voices:write"
       ],
+      "body": {
+        "required": [
+          "intent",
+          "name",
+          "profile"
+        ],
+        "fields": {
+          "intent": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "profile": {
+            "type": "value"
+          },
+          "voice_id": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "intent": "create",
+          "name": "Practical guide",
+          "profile": {
+            "writing_style_analysis": {
+              "speaker_archetype": {
+                "label": "Practical guide",
+                "description": "Calm expert.",
+                "axes": {
+                  "age_vibe": "experienced peer",
+                  "profession_archetype": "strategist",
+                  "temperament": "calm",
+                  "authority_posture": "confident"
+                }
+              },
+              "stance_and_relationship": {
+                "narrative_person": "second person",
+                "intimacy_distance": "trusted peer",
+                "certainty_level": "Names uncertainty.",
+                "audience_model": "Experienced creators."
+              },
+              "delivery_recipe": {
+                "cadence": "Short claims.",
+                "energy": "Warm.",
+                "pacing_and_emphasis": [
+                  "Front-load the point."
+                ]
+              },
+              "rhetorical_toolkit": {
+                "hook_patterns": [
+                  "Open with a misconception."
+                ],
+                "transitions": [
+                  "Here is the useful part."
+                ],
+                "explanation_patterns": [
+                  "Make it concrete."
+                ],
+                "storytelling_patterns": [
+                  "Start at the decision."
+                ],
+                "cta_patterns": [],
+                "analogy_and_evidence": "Use one analogy.",
+                "humor_and_empathy": "Keep humor light."
+              },
+              "diction_and_syntax": {
+                "vocabulary_level": "conversational",
+                "word_complexity": "Prefer short words.",
+                "sentence_shape": "Mix short and medium sentences.",
+                "preferred_constructions": [
+                  "Here is the tradeoff."
+                ],
+                "avoid": [
+                  "Empty jargon."
+                ]
+              },
+              "phrase_kit": {
+                "uses": [],
+                "avoid": [],
+                "replacements": []
+              },
+              "jargon_policy": {
+                "allow": [],
+                "explain_with": [
+                  "a tiny example"
+                ]
+              },
+              "formatting_directives": [
+                "Use short paragraphs."
+              ],
+              "do_dont": {
+                "do": [
+                  "Lead with value."
+                ],
+                "dont": [
+                  "Invent facts."
+                ],
+                "never_does": [
+                  "Hide uncertainty."
+                ]
+              },
+              "locale_and_dialect": "Natural American English.",
+              "thinking_style": "Test conclusions against evidence.",
+              "spoken_patterns": {
+                "common_phrases": [],
+                "starter_words": [],
+                "transition_phrases": []
+              },
+              "rewriter_directives": [
+                "Address the listener as you."
+              ],
+              "adherence_checklist": [
+                "No invented specifics."
+              ],
+              "lexical_glossary": [],
+              "example_paragraph": "Start with the decision your viewer needs to make. Then give them only the evidence that changes it.",
+              "style_examples": [
+                "Start with the decision your viewer needs to make. Then build the explanation around the evidence that changes that decision."
+              ]
+            }
+          }
+        }
+      },
       "method": "POST",
       "operation_id": "validateVoiceProfile",
       "path": "/api/v1/channels/{channel}/voices/validate",
       "query_parameters": [],
+      "summary": "Validate and canonicalize a complete Voice Profile v2 without mutating data",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -1009,10 +2033,52 @@
       "abilities": [
         "webhooks:write"
       ],
+      "body": {
+        "required": [
+          "name",
+          "url"
+        ],
+        "fields": {
+          "events": {
+            "type": "string[]"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Associative header map. Keys use letters, numbers, or hyphens; reserved transport/authentication headers are rejected case-insensitively."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 120
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Must use HTTPS and resolve to a public, non-reserved host; redirects and DNS resolution are revalidated server-side."
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "Partner hook",
+          "url": "https://example.com/webhooks/subscribr",
+          "events": [
+            "script.generated"
+          ],
+          "headers": {
+            "X-Partner": "subscribr"
+          },
+          "timeout": 30
+        }
+      },
       "method": "POST",
       "operation_id": "createWebhook",
       "path": "/api/v1/webhooks",
       "query_parameters": [],
+      "summary": "Create Webhook",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -1023,10 +2089,12 @@
       "abilities": [
         "webhooks:write"
       ],
+      "body": null,
       "method": "DELETE",
       "operation_id": "deleteWebhook",
       "path": "/api/v1/webhooks/{webhook}",
       "query_parameters": [],
+      "summary": "Delete Webhook",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -1037,30 +2105,36 @@
       "abilities": [
         "webhooks:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "getWebhook",
       "path": "/api/v1/webhooks/{webhook}",
       "query_parameters": [],
+      "summary": "Get Webhook",
       "write_safety": null
     },
     "webhooks.list-webhooks": {
       "abilities": [
         "webhooks:read"
       ],
+      "body": null,
       "method": "GET",
       "operation_id": "listWebhooks",
       "path": "/api/v1/webhooks",
       "query_parameters": [],
+      "summary": "List Webhooks",
       "write_safety": null
     },
     "webhooks.test-webhook": {
       "abilities": [
         "webhooks:write"
       ],
+      "body": null,
       "method": "POST",
       "operation_id": "testWebhook",
       "path": "/api/v1/webhooks/{webhook}/test",
       "query_parameters": [],
+      "summary": "Test Webhook",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -1071,10 +2145,48 @@
       "abilities": [
         "webhooks:write"
       ],
+      "body": {
+        "required": [],
+        "fields": {
+          "active": {
+            "type": "boolean"
+          },
+          "events": {
+            "type": "string[]"
+          },
+          "headers": {
+            "type": "object",
+            "description": "Associative header map. Keys use letters, numbers, or hyphens; reserved transport/authentication headers are rejected case-insensitively."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 120
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Must use HTTPS and resolve to a public, non-reserved host; redirects and DNS resolution are revalidated server-side."
+          }
+        },
+        "body_required": false,
+        "example": {
+          "active": false,
+          "headers": {
+            "X-Partner": "updated"
+          },
+          "timeout": 45
+        }
+      },
       "method": "PUT",
       "operation_id": "updateWebhook",
       "path": "/api/v1/webhooks/{webhook}",
       "query_parameters": [],
+      "summary": "Update Webhook",
       "write_safety": {
         "concurrency": "unsupported",
         "idempotency": "unsupported",
@@ -1169,6 +2281,6 @@
     "updateWebhook",
     "testWebhook"
   ],
-  "source_sha256": "ff92738bf9c4837b174edc9f3c501ec37b8ef9893fa0a13e21383e901a63a060",
+  "source_sha256": "6c70f0bc3b467d025083662d1b17596a0683c3a27b42c2903f8ff92048d9ef8d",
   "supported_contract_range": "^1.0.0"
 }
