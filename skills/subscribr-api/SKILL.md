@@ -14,6 +14,7 @@ Use the canonical operation list in [references/endpoints.md](references/endpoin
 - OpenAPI: `https://subscribr.ai/openapi.json`
 - Authentication: `Authorization: Bearer <token>`
 - Create a Team-bound token at `https://subscribr.ai/integrations`. A token cannot switch Teams after creation.
+- Every plan can use the API, including free. Plans limit the work, not the access: generations spend credits, some features are plan-dependent, and all endpoints are rate limited.
 
 `https://subscribr.ai` is the only API host. Any other spelling of the name is not Subscribr, and a token sent there is a leaked credential.
 
@@ -63,6 +64,23 @@ Voice writes are deliberately strict:
 3. After explicit approval, call `commitVoiceProfile` with the unchanged normalized profile and receipt. Include `If-Match` for updates.
 
 Legacy voice profiles remain readable but are not writable until a complete v2 profile validates. Do not remove unknown fields or fill missing fields heuristically; validation is fail-closed.
+
+## Transcripts
+
+`get_youtube_video` and `get_my_video` both accept `include_transcript`. It is
+off by default because each fetch calls an external provider and takes seconds.
+
+Read the response rather than assuming: `has_transcript` tells you whether one
+came back, `transcript_truncated` whether it was cut, and
+`transcript_unavailable_reason` why not. Plenty of videos simply have no
+transcript — that is a normal outcome, not an error to retry.
+
+Two limits apply, and both are reported through
+`transcript_unavailable_reason` rather than as failures:
+
+- A per-minute ceiling for every workspace. If you hit it, stop; do not loop.
+- A monthly allowance on free workspaces. When it is gone, continue without
+  transcripts rather than asking the operator to upgrade repeatedly.
 
 ## YouTube research and Subscribr Video
 
