@@ -67,7 +67,7 @@ Legacy voice profiles remain readable but are not writable until a complete v2 p
 
 ## Transcripts
 
-`get_youtube_video` and `get_my_video` both accept `include_transcript`. It is
+`get_youtube_video` (any video) and `get_research_video` (a video on a channel you track) both accept `include_transcript`. It is
 off by default because each fetch calls an external provider and takes seconds.
 
 Read the response rather than assuming: `has_transcript` tells you whether one
