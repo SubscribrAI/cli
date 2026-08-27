@@ -17,7 +17,8 @@ SPEC.loader.exec_module(subscribr)
 
 
 class CliContractTest(unittest.TestCase):
-    VIDEO_ROUTES = {
+    # The original nine: capability discovery, Channels, and custom assets.
+    VIDEO_READ_ROUTES = {
         "video.list-capabilities": ("videoListCapabilities", "/api/v1/video/capabilities"),
         "video.list-channels": ("videoListChannels", "/api/v1/video/channels"),
         "video.get-channel": ("videoGetChannel", "/api/v1/video/channels/{videoChannel}"),
@@ -27,7 +28,34 @@ class CliContractTest(unittest.TestCase):
         "video.get-avatar": ("videoGetAvatar", "/api/v1/video/avatars/{avatar}"),
         "video.list-media-assets": ("videoListMediaAssets", "/api/v1/video/media-assets"),
         "video.get-media-asset": ("videoGetMediaAsset", "/api/v1/video/media-assets/{mediaAsset}"),
+        # Review & Fix reads added alongside the staging writes below.
+        "video.list-projects": ("videoListProjects", "/api/v1/video/projects"),
+        "video.get-project": ("videoGetProject", "/api/v1/video/projects/{project}"),
+        "video.get-project-download": ("videoGetProjectDownload", "/api/v1/video/projects/{project}/download"),
+        "video.get-editable-content": ("videoGetEditableContent", "/api/v1/video/projects/{project}/editable-content"),
+        "video.get-revision-manifest": ("videoGetRevisionManifest", "/api/v1/video/projects/{project}/revision-manifest"),
+        "video.list-overlay-templates": ("videoListOverlayTemplates", "/api/v1/video/projects/{project}/overlay-templates"),
+        "video.get-quality-report": ("videoGetQualityReport", "/api/v1/video/projects/{project}/quality-report"),
+        "video.get-revision-pass": ("videoGetRevisionPass", "/api/v1/video/projects/{project}/revision/passes/{pass}"),
     }
+    # Review & Fix staging/discard writes: video:edit, idempotency+concurrency required.
+    VIDEO_EDIT_WRITE_ROUTES = {
+        "video.add-overlay": ("videoAddOverlay", "/api/v1/video/projects/{project}/revision/overlays"),
+        "video.remove-staged-overlay": ("videoRemoveStagedOverlay", "/api/v1/video/projects/{project}/revision/overlays/{item}"),
+        "video.update-overlay": ("videoUpdateOverlay", "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}"),
+        "video.remove-overlay": ("videoRemoveOverlay", "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}"),
+        "video.update-captions": ("videoUpdateCaptions", "/api/v1/video/projects/{project}/revision/captions"),
+        "video.remove-music": ("videoRemoveMusic", "/api/v1/video/projects/{project}/revision/music"),
+        "video.edit-slide-text": ("videoEditSlideText", "/api/v1/video/projects/{project}/revision/slide-text"),
+        "video.regenerate-visual": ("videoRegenerateVisual", "/api/v1/video/projects/{project}/revision/regenerate-visual"),
+        "video.show-presenter": ("videoShowPresenter", "/api/v1/video/projects/{project}/revision/presenter"),
+        "video.discard-edit": ("videoDiscardEdit", "/api/v1/video/projects/{project}/revision/items/{item}"),
+    }
+    # Publishing a revision: video:publish, its own ability, same write safety.
+    VIDEO_PUBLISH_WRITE_ROUTES = {
+        "video.apply-revision": ("videoApplyRevision", "/api/v1/video/projects/{project}/revision/apply"),
+    }
+    VIDEO_ROUTES = {**VIDEO_READ_ROUTES, **VIDEO_EDIT_WRITE_ROUTES, **VIDEO_PUBLISH_WRITE_ROUTES}
 
     def test_generated_metadata_covers_all_current_operations(self):
         operation_ids = {route["operation_id"] for route in subscribr.ROUTES.values()}
@@ -40,7 +68,7 @@ class CliContractTest(unittest.TestCase):
         self.assertIn("templates.create-template", subscribr.ROUTES)
         self.assertIn("voices.commit-voice-profile", subscribr.ROUTES)
 
-    def test_video_surface_contains_exactly_the_nine_canonical_reads(self):
+    def test_video_surface_contains_the_full_review_and_fix_operation_set(self):
         routes = {
             key: (route["operation_id"], route["path"])
             for key, route in subscribr.ROUTES.items()
@@ -48,10 +76,32 @@ class CliContractTest(unittest.TestCase):
         }
 
         self.assertEqual(self.VIDEO_ROUTES, routes)
-        for key in self.VIDEO_ROUTES:
-            self.assertEqual("GET", subscribr.ROUTES[key]["method"])
-            self.assertEqual(["video:read"], subscribr.ROUTES[key]["abilities"])
-            self.assertIsNone(subscribr.ROUTES[key]["write_safety"])
+
+        for key in self.VIDEO_READ_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertEqual("GET", route["method"], key)
+            self.assertEqual(["video:read"], route["abilities"], key)
+            self.assertIsNone(route["write_safety"], key)
+
+        for key in self.VIDEO_EDIT_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:edit"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "required", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_PUBLISH_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:publish"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "required", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
 
     def test_aliases_resolve_to_generated_routes(self):
         key, route = subscribr.resolve_route("scripts", "agent-cancel")
@@ -198,18 +248,31 @@ class CliContractTest(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         skill = (ROOT / "skills/subscribr-api/SKILL.md").read_text()
 
+        # The addendum's command table is the exhaustive command reference;
+        # every generated video command must be documented there.
         for command in self.VIDEO_ROUTES:
             action = command.split(".", 1)[1]
-            self.assertIn(f"video {action}", readme)
             self.assertIn(f"video {action}", skill)
+
         for document in (readme, skill):
             self.assertIn("video_capability_unavailable", document)
             self.assertIn("video_provisioning_required", document)
             self.assertIn("Team-bound", document)
             self.assertIn("owner/admin-only", document)
-            self.assertIn("quote", document)
-            self.assertIn("revision", document)
-        self.assertIn("Subscribr Video capability, Channel, and custom-asset reads", skill)
+
+        for document in (readme, skill):
+            self.assertIn("video:edit", document)
+            self.assertIn("video:publish", document)
+            self.assertIn("--idempotency-key", document)
+            self.assertIn("--if-match", document)
+            self.assertIn("apply-revision", document)
+            self.assertIn("immutable", document)
+            self.assertIn("--output", document)
+
+        # apply-revision needs explicit user approval before it is called; it
+        # publishes an unrecoverable change.
+        self.assertIn("confirm", skill.lower())
+        self.assertIn("download", skill.lower())
 
 
 
@@ -471,6 +534,7 @@ class RequestTest(unittest.TestCase):
                 subscribr.request("PATCH", "/api/v1/projects/project%3Av1%3Aidea%3A1", {}, max_attempts=1)
         self.assertEqual(subscribr.EXIT_CONFLICT, raised.exception.exit_code)
         self.assertEqual("revision_conflict", raised.exception.detail["error"]["code"])
+
 
 
 if __name__ == "__main__":

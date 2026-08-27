@@ -107,7 +107,7 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /scripts/);
   assert.match(help.stdout, /operations/);
-  assert.match(help.stdout, /video\s+\(9 actions\)/);
+  assert.match(help.stdout, /video\s+\(28 actions\)/);
 
   const operationHelp = runCli(destination, "operations", "help");
   assert.equal(operationHelp.status, 0, operationHelp.stderr);
@@ -121,6 +121,8 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
   assert.match(videoHelp.stdout, /required: --video-channel <value>/);
   assert.match(videoHelp.stdout, /get-media-asset/);
   assert.match(videoHelp.stdout, /required: --media-asset <value>/);
+  assert.match(videoHelp.stdout, /apply-revision/);
+  assert.match(videoHelp.stdout, /add-overlay/);
 
   const installedSkill = fs.readFileSync(
     path.join(cwd, ".agents", "skills", "subscribr-api", "SKILL.md"),
@@ -128,7 +130,9 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
   );
   assert.match(installedSkill, /video_capability_unavailable/);
   assert.match(installedSkill, /owner\/admin-only/);
-  assert.match(installedSkill, /quote, project, render/);
+  assert.match(installedSkill, /video apply-revision/);
+  assert.match(installedSkill, /video:publish/);
+  assert.match(installedSkill, /immutable/);
 
   fs.writeFileSync(cli, "custom\n");
   assert.equal(install(cwd, "--cli-dir", relativeDestination).status, 1);
