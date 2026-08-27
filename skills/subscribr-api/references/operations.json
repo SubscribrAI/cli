@@ -1610,6 +1610,132 @@
       "summary": "List Thumbnail Generations",
       "write_safety": null
     },
+    "video.add-overlay": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "template",
+          "inputs"
+        ],
+        "fields": {
+          "beat_sequence": {
+            "type": "integer"
+          },
+          "client_request_id": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "number"
+          },
+          "inputs": {
+            "type": "object"
+          },
+          "playhead_time": {
+            "type": "number"
+          },
+          "span_scope": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "number"
+          },
+          "template": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "template": "lower_third",
+          "inputs": {
+            "text": "New product launch"
+          },
+          "playhead_time": 42.0
+        }
+      },
+      "method": "POST",
+      "operation_id": "videoAddOverlay",
+      "path": "/api/v1/video/projects/{project}/revision/overlays",
+      "query_parameters": [],
+      "summary": "Add a staged overlay to a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.apply-revision": {
+      "abilities": [
+        "video:publish"
+      ],
+      "body": null,
+      "method": "POST",
+      "operation_id": "videoApplyRevision",
+      "path": "/api/v1/video/projects/{project}/revision/apply",
+      "query_parameters": [],
+      "summary": "Apply a Subscribr Video revision and publish a new version",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.discard-edit": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": null,
+      "method": "DELETE",
+      "operation_id": "videoDiscardEdit",
+      "path": "/api/v1/video/projects/{project}/revision/items/{item}",
+      "query_parameters": [],
+      "summary": "Discard a staged edit from a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.edit-slide-text": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "block_key",
+          "field_edits"
+        ],
+        "fields": {
+          "block_key": {
+            "type": "string"
+          },
+          "field_edits": {
+            "type": "object[]"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "block_key": "slide_3",
+          "field_edits": [
+            {
+              "key": "headline",
+              "value": "New headline"
+            }
+          ]
+        }
+      },
+      "method": "PATCH",
+      "operation_id": "videoEditSlideText",
+      "path": "/api/v1/video/projects/{project}/revision/slide-text",
+      "query_parameters": [],
+      "summary": "Edit slide text in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
     "video.get-avatar": {
       "abilities": [
         "video:read"
@@ -1634,6 +1760,18 @@
       "summary": "Get a Subscribr Video channel for the current team",
       "write_safety": null
     },
+    "video.get-editable-content": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetEditableContent",
+      "path": "/api/v1/video/projects/{project}/editable-content",
+      "query_parameters": [],
+      "summary": "Get a Subscribr Video project's editable Review & Fix content",
+      "write_safety": null
+    },
     "video.get-media-asset": {
       "abilities": [
         "video:read"
@@ -1644,6 +1782,69 @@
       "path": "/api/v1/video/media-assets/{mediaAsset}",
       "query_parameters": [],
       "summary": "Get reference media available to the current team",
+      "write_safety": null
+    },
+    "video.get-project": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetProject",
+      "path": "/api/v1/video/projects/{project}",
+      "query_parameters": [],
+      "summary": "Get a Subscribr Video project",
+      "write_safety": null
+    },
+    "video.get-project-download": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetProjectDownload",
+      "path": "/api/v1/video/projects/{project}/download",
+      "query_parameters": [],
+      "summary": "Get a Subscribr Video project's download URL",
+      "write_safety": null
+    },
+    "video.get-quality-report": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetQualityReport",
+      "path": "/api/v1/video/projects/{project}/quality-report",
+      "query_parameters": [],
+      "summary": "Get a Subscribr Video project's latest quality report",
+      "write_safety": null
+    },
+    "video.get-revision-manifest": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetRevisionManifest",
+      "path": "/api/v1/video/projects/{project}/revision-manifest",
+      "query_parameters": [
+        "cursor",
+        "per_page"
+      ],
+      "summary": "Get a Subscribr Video project's revision manifest",
+      "write_safety": null
+    },
+    "video.get-revision-pass": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoGetRevisionPass",
+      "path": "/api/v1/video/projects/{project}/revision/passes/{pass}",
+      "query_parameters": [],
+      "summary": "Get one Subscribr Video revision pass",
       "write_safety": null
     },
     "video.get-voice": {
@@ -1712,6 +1913,30 @@
       "summary": "List reference media available to the current team",
       "write_safety": null
     },
+    "video.list-overlay-templates": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoListOverlayTemplates",
+      "path": "/api/v1/video/projects/{project}/overlay-templates",
+      "query_parameters": [],
+      "summary": "List overlay templates available for a Subscribr Video project",
+      "write_safety": null
+    },
+    "video.list-projects": {
+      "abilities": [
+        "video:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "videoListProjects",
+      "path": "/api/v1/video/projects",
+      "query_parameters": [],
+      "summary": "List Subscribr Video projects",
+      "write_safety": null
+    },
     "video.list-voices": {
       "abilities": [
         "video:read"
@@ -1726,6 +1951,199 @@
       ],
       "summary": "List custom voices available to the current team",
       "write_safety": null
+    },
+    "video.regenerate-visual": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "block_key",
+          "prompt"
+        ],
+        "fields": {
+          "block_key": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "block_key": "slide_5",
+          "prompt": "A wide shot of a modern kitchen"
+        }
+      },
+      "method": "PUT",
+      "operation_id": "videoRegenerateVisual",
+      "path": "/api/v1/video/projects/{project}/revision/regenerate-visual",
+      "query_parameters": [],
+      "summary": "Regenerate a visual block in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.remove-music": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "remove"
+        ],
+        "fields": {
+          "remove": {
+            "type": "boolean"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "remove": true
+        }
+      },
+      "method": "PUT",
+      "operation_id": "videoRemoveMusic",
+      "path": "/api/v1/video/projects/{project}/revision/music",
+      "query_parameters": [],
+      "summary": "Update background music removal in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.remove-overlay": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": null,
+      "method": "DELETE",
+      "operation_id": "videoRemoveOverlay",
+      "path": "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}",
+      "query_parameters": [],
+      "summary": "Remove a published overlay from a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.remove-staged-overlay": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": null,
+      "method": "DELETE",
+      "operation_id": "videoRemoveStagedOverlay",
+      "path": "/api/v1/video/projects/{project}/revision/overlays/{item}",
+      "query_parameters": [],
+      "summary": "Remove a staged overlay from a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.show-presenter": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "block_key"
+        ],
+        "fields": {
+          "block_key": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "block_key": "slide_7",
+          "note": "Show the presenter here instead."
+        }
+      },
+      "method": "PUT",
+      "operation_id": "videoShowPresenter",
+      "path": "/api/v1/video/projects/{project}/revision/presenter",
+      "query_parameters": [],
+      "summary": "Switch a visual block to the presenter in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.update-captions": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "enabled",
+          "style"
+        ],
+        "fields": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "style": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "enabled": true,
+          "style": "default"
+        }
+      },
+      "method": "PUT",
+      "operation_id": "videoUpdateCaptions",
+      "path": "/api/v1/video/projects/{project}/revision/captions",
+      "query_parameters": [],
+      "summary": "Update caption settings in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.update-overlay": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "inputs"
+        ],
+        "fields": {
+          "inputs": {
+            "type": "object"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "inputs": {
+            "text": "Updated overlay text"
+          }
+        }
+      },
+      "method": "PATCH",
+      "operation_id": "videoUpdateOverlay",
+      "path": "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}",
+      "query_parameters": [],
+      "summary": "Update a published overlay in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
     },
     "voices.commit-voice-profile": {
       "abilities": [
@@ -2272,6 +2690,25 @@
     "videoGetChannel",
     "videoListMediaAssets",
     "videoGetMediaAsset",
+    "videoListProjects",
+    "videoGetProject",
+    "videoGetProjectDownload",
+    "videoGetEditableContent",
+    "videoListOverlayTemplates",
+    "videoGetQualityReport",
+    "videoGetRevisionManifest",
+    "videoApplyRevision",
+    "videoUpdateCaptions",
+    "videoDiscardEdit",
+    "videoRemoveMusic",
+    "videoAddOverlay",
+    "videoRemoveStagedOverlay",
+    "videoGetRevisionPass",
+    "videoShowPresenter",
+    "videoRemoveOverlay",
+    "videoUpdateOverlay",
+    "videoRegenerateVisual",
+    "videoEditSlideText",
     "videoListVoices",
     "videoGetVoice",
     "listWebhooks",
@@ -2281,6 +2718,6 @@
     "updateWebhook",
     "testWebhook"
   ],
-  "source_sha256": "6c70f0bc3b467d025083662d1b17596a0683c3a27b42c2903f8ff92048d9ef8d",
+  "source_sha256": "0a890f29d3854bea5a2e885bc2e907510d83c0b643218cf0a3768959f3a11fb5",
   "supported_contract_range": "^1.0.0"
 }

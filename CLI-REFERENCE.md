@@ -38,6 +38,8 @@ subscribr operations get-operation --operation <uuid>
 
 `Ctrl-C` stops the CLI. It does not cancel the underlying server-side work.
 
+When a response body carries a `download_url` (for example `video get-project-download`), pass `--output <path>` to stream the file straight to disk instead of printing the signed URL. The CLI never logs or prints that URL or the bearer token, never sends the token to the signed URL's own host, and writes to a temporary file first, renaming it into place only once the download finishes.
+
 ## Exit codes
 
 | Code | Meaning |
