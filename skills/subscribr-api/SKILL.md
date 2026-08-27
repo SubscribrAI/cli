@@ -84,13 +84,17 @@ Two limits apply, and both are reported through
 
 ## YouTube research and Subscribr Video
 
-Keep using the Intel video lookup/search operations for open-world YouTube research and tracked-channel MCP research tools. Subscribr Video is the video-production surface and now has a deliberately narrow, read-only public slice.
+Keep using the Intel video lookup/search operations for open-world YouTube research and tracked-channel MCP research tools. Subscribr Video is the video-production surface.
 
 Use a Team-bound API token (API key) with `video:read`; a token cannot switch Teams. Start with capability discovery, then read Channels or assets through `videoListCapabilities`, `videoListChannels`, `videoGetChannel`, `videoListVoices`, `videoGetVoice`, `videoListAvatars`, `videoGetAvatar`, `videoListMediaAssets`, and `videoGetMediaAsset`.
 
 The Video slice is default-off. Treat `video_capability_unavailable` as an explicit Team capability denial, `video_provisioning_required` as a missing connection, and `video_configuration_not_ready` as a retryable rollout/configuration state. Asset reads are owner/admin-only in this slice.
 
-Subscribr Video quote, project, render, cancellation, artifact, and revision operations are not shipped. Do not invent them.
+Subscribr Video also ships a Review & Fix facade for an existing project. Read a project with `videoListProjects`, `videoGetProject`, and `videoGetProjectDownload`. Read what can change with `videoGetEditableContent`, `videoGetRevisionManifest`, `videoListOverlayTemplates`, `videoGetQualityReport`, and `videoGetRevisionPass`. Stage or discard a change with `video:edit`: `videoAddOverlay`, `videoRemoveStagedOverlay`, `videoUpdateOverlay`, `videoRemoveOverlay`, `videoUpdateCaptions`, `videoRemoveMusic`, `videoEditSlideText`, `videoRegenerateVisual`, `videoShowPresenter`, and `videoDiscardEdit`. Every staging write needs `Idempotency-Key` and `If-Match`; call `videoGetEditableContent` or `videoGetRevisionManifest` first and send its response `ETag` back as `If-Match`.
+
+`videoApplyRevision` (`video:publish`) publishes the staged changes as a new immutable revision. This cannot be undone the way a staged edit can. Show the staged change list and stop for explicit user approval before you call it.
+
+Subscribr Video quote, project creation, render submission, cancellation, and artifact operations are not shipped. Do not invent them.
 
 ## MCP
 
