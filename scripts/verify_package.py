@@ -44,17 +44,15 @@ ALLOWED_URL_HOSTS = {
     "www.youtube.com",
 }
 BANNED_URL_HOSTS = {"subscribr.com", "www.subscribr.com"}
-VIDEO_READ_OPERATIONS = {
-    "videoGetAvatar",
-    "videoGetChannel",
-    "videoGetMediaAsset",
-    "videoGetVoice",
-    "videoListAvatars",
-    "videoListCapabilities",
-    "videoListChannels",
-    "videoListMediaAssets",
-    "videoListVoices",
-}
+# The Video slice has three shapes and each one is fail-closed against drift:
+# a read (GET, `video:read`, no write safety), a staging/discard write
+# (non-GET, `video:edit`, idempotency AND concurrency both required), and the
+# single publish write (`videoApplyRevision`, `video:publish`, same write
+# safety as any other write). A new operation that matches none of these
+# shapes — or a read that gained write safety, or a write that lost it — must
+# fail this check loudly rather than pass unnoticed.
+VIDEO_PUBLISH_OPERATIONS = {"videoApplyRevision"}
+VIDEO_WRITE_SAFETY = {"idempotency": "required", "concurrency": "required", "retry": "same-key"}
 SECRET = re.compile(r"(?:sk_live_|sk_test_|ghp_|github_pat_)[A-Za-z0-9_-]{16,}")
 URL = re.compile(r"https?://[^\s<>\"'`]+")
 
@@ -129,15 +127,25 @@ def main() -> None:
         for key, operation in operations["operations"].items()
         if key.startswith("video.")
     }
-    if set(video_operations) != VIDEO_READ_OPERATIONS:
-        fail("operation metadata does not contain exactly the nine public Video reads")
-    if any(
-        operation["method"] != "GET"
-        or operation["abilities"] != ["video:read"]
-        or operation["write_safety"] is not None
-        for operation in video_operations.values()
-    ):
-        fail("public Video operations must remain read-only and require video:read")
+    if not video_operations:
+        fail("operation metadata is missing the public Video operation surface")
+    if VIDEO_PUBLISH_OPERATIONS - set(video_operations):
+        fail("operation metadata is missing videoApplyRevision")
+
+    for operation_id, operation in video_operations.items():
+        if operation["method"] == "GET":
+            if operation["abilities"] != ["video:read"] or operation["write_safety"] is not None:
+                fail(f"public Video read {operation_id} must require only video:read and carry no write safety")
+            continue
+
+        if operation["write_safety"] != VIDEO_WRITE_SAFETY:
+            fail(f"public Video write {operation_id} must require both idempotency and concurrency")
+
+        if operation_id in VIDEO_PUBLISH_OPERATIONS:
+            if operation["abilities"] != ["video:publish"]:
+                fail(f"{operation_id} must require video:publish")
+        elif operation["abilities"] != ["video:edit"]:
+            fail(f"public Video write {operation_id} must require video:edit")
 
     print(f"package verification passed: {len(EXPECTED_PACKAGE_FILES)} allowlisted files, {len(operation_ids)} operations, provenance current")
 
