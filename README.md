@@ -127,7 +127,7 @@ Reads require `video:read`. Staging and discard writes require `video:edit`. `ap
 
 This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
 
-`video apply-revision` publishes a new, immutable video revision — there is no undo. Confirm the staged changes with the user before calling it, then poll the returned operation with `operations get-operation`. Download and inspect the finished video with `video get-project-download --output <path>` before telling the user the edit is done; a successful publish is not proof the video is correct.
+`video apply-revision` publishes a new, immutable video revision — there is no undo. Confirm the staged changes with the user before calling it, then poll the returned operation with `operations get-operation`. Download and inspect the finished video with `video get-project-download --output <path>` before telling the user the edit is done; a successful publish is not proof the video is correct. A `409 revision_conflict` on any video write carries `error.current_revision`; retry the identical write with that value as `--if-match` instead of re-fetching the manifest.
 
 For YouTube research, separate from Subscribr Video, use the Intel video operations instead.
 

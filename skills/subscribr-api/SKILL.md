@@ -250,6 +250,11 @@ Follow this order for every agent-driven video edit:
 6. Download the finished video with `video get-project-download --project
    <id> --output <path>` and inspect it.
 
+If a staging write or `video apply-revision` returns `409 revision_conflict`,
+do not re-fetch the manifest first. Retry the identical write immediately
+with the same `--idempotency-key` and `error.current_revision` from the
+response body as the new `--if-match`.
+
 A `202` accepted, a successful staging call, or a ready-looking preview is
 **not** proof the video is good. Only the downloaded final artifact is. Do
 not tell the user an edit is done until you have downloaded and inspected

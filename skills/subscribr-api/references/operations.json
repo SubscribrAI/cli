@@ -2718,6 +2718,6 @@
     "updateWebhook",
     "testWebhook"
   ],
-  "source_sha256": "f76b927b86a8492108901bd0690dd7ecd21e923bdc21bc5a64c2881e0f53c566",
+  "source_sha256": "e2ad6769fed4e97446c7d76e626e46cd3cc531be3207d2736dcf1ee5ce523fd0",
   "supported_contract_range": "^1.0.0"
 }
