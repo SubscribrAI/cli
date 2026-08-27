@@ -536,6 +536,116 @@ class RequestTest(unittest.TestCase):
         self.assertEqual("revision_conflict", raised.exception.detail["error"]["code"])
 
 
+class DownloadOutputTest(unittest.TestCase):
+    """`--output` streams a response's `download_url` to disk instead of
+    printing it, and never sends our bearer token to that third-party host."""
+
+    def setUp(self):
+        self.environment = patch.dict(os.environ, {
+            "SUBSCRIBR_API_TOKEN": "secret",
+            "SUBSCRIBR_API_BASE_URL": "https://example.test",
+        }, clear=True)
+        self.environment.start()
+        self.temp_dir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.environment.stop()
+        self.temp_dir.cleanup()
+
+    def test_find_download_url_reads_the_top_level_or_the_data_envelope(self):
+        self.assertEqual("https://cdn.example/x.mp4", subscribr.find_download_url({"download_url": "https://cdn.example/x.mp4"}))
+        self.assertEqual(
+            "https://cdn.example/y.mp4",
+            subscribr.find_download_url({"data": {"download_url": "https://cdn.example/y.mp4"}}),
+        )
+        self.assertIsNone(subscribr.find_download_url({"data": {"id": "proj_1"}}))
+        self.assertIsNone(subscribr.find_download_url(["not", "a", "dict"]))
+        self.assertIsNone(subscribr.find_download_url(None))
+
+    def test_download_to_file_streams_to_a_temp_file_and_renames_on_success(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.side_effect = [b"chunk-one", b"chunk-two", b""]
+        destination = Path(self.temp_dir.name) / "nested" / "final.mp4"
+
+        with patch("urllib.request.urlopen", return_value=response) as opener:
+            written = subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+
+        self.assertEqual(len(b"chunk-onechunk-two"), written)
+        self.assertEqual(b"chunk-onechunk-two", destination.read_bytes())
+        # No leftover partial file next to the finished download.
+        self.assertEqual([destination.name], [entry.name for entry in destination.parent.iterdir()])
+
+        sent_request = opener.call_args[0][0]
+        self.assertNotIn("Authorization", sent_request.headers)
+        self.assertNotIn("authorization", {key.lower() for key in sent_request.headers})
+
+    def test_download_to_file_rejects_a_non_http_url_without_a_request(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        with patch("urllib.request.urlopen", side_effect=AssertionError("must not be called")):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("ftp://cdn.example/final.mp4", destination)
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+
+    def test_download_to_file_maps_http_errors_and_cleans_up_the_temp_file(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        error = urllib.error.HTTPError("https://cdn.example/final.mp4", 403, "Forbidden", {}, io.BytesIO(b""))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+        self.assertEqual(subscribr.EXIT_AUTH, raised.exception.exit_code)
+        self.assertEqual([], list(destination.parent.iterdir()))
+        # The signed URL itself must never appear in an error message.
+        self.assertNotIn("sig=abc", str(raised.exception))
+
+    def test_download_to_file_treats_url_errors_as_transient(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("connection reset")):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+        self.assertEqual(subscribr.EXIT_TRANSIENT, raised.exception.exit_code)
+
+    def test_run_with_output_downloads_and_never_prints_the_signed_url(self):
+        # `--output` is generic transport behavior, not Video-specific, so this
+        # exercises it against `team get-team` rather than a Video route.
+        payload = {"data": {"download_url": "https://cdn.example/final.mp4?sig=super-secret", "expires_at": "2026-08-27T13:00:00Z"}}
+        destination = Path(self.temp_dir.name) / "final.mp4"
+
+        stdout = io.StringIO()
+        with patch.object(subscribr, "request", return_value=payload), \
+                patch.object(subscribr, "download_to_file", return_value=1234) as downloader, \
+                redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run([
+                "team", "get-team",
+                "--output", str(destination),
+            ]))
+
+        downloader.assert_called_once_with("https://cdn.example/final.mp4?sig=super-secret", destination)
+        output = stdout.getvalue()
+        self.assertNotIn("sig=super-secret", output)
+        self.assertNotIn("secret", output)  # the bearer token must not leak either
+        result = json.loads(output)
+        self.assertEqual({"downloaded": True, "path": str(destination), "bytes": 1234, "url_expires_at": "2026-08-27T13:00:00Z"}, result)
+
+    def test_run_with_output_fails_closed_when_the_response_has_no_download_url(self):
+        with patch.object(subscribr, "request", return_value={"data": {"id": "team_1"}}):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.run([
+                    "team", "get-team",
+                    "--output", str(Path(self.temp_dir.name) / "final.mp4"),
+                ])
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
+
+    def test_split_transport_options_extracts_output_alongside_wait(self):
+        remaining, wait, output = subscribr.split_transport_options(["--project", "p1", "--output", "./out.mp4", "--wait"])
+        self.assertEqual(["--project", "p1"], remaining)
+        self.assertTrue(wait)
+        self.assertEqual("./out.mp4", output)
+
+    def test_output_without_a_path_is_a_usage_error(self):
+        with self.assertRaises(subscribr.CliError) as raised:
+            subscribr.split_transport_options(["--output"])
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -317,15 +317,98 @@ def build_request(route: dict[str, Any], arguments: dict[str, Any]) -> tuple[str
     return method, path, body, headers
 
 
-def split_transport_options(args: list[str]) -> tuple[list[str], bool]:
+def split_transport_options(args: list[str]) -> tuple[list[str], bool, str | None]:
     wait = False
+    output: str | None = None
     remaining: list[str] = []
-    for argument in args:
+    index = 0
+    while index < len(args):
+        argument = args[index]
         if argument == "--wait":
             wait = True
+            index += 1
+            continue
+        if argument == "--output":
+            if index + 1 >= len(args):
+                raise CliError("--output requires a file path.", EXIT_USAGE)
+            output = args[index + 1]
+            index += 2
             continue
         remaining.append(argument)
-    return remaining, wait
+        index += 1
+    return remaining, wait, output
+
+
+def find_download_url(payload: Any) -> str | None:
+    """A response's `download_url`, at the top level or nested under `data`."""
+    if not isinstance(payload, dict):
+        return None
+    direct = payload.get("download_url")
+    if isinstance(direct, str) and direct:
+        return direct
+    nested = payload.get("data")
+    if isinstance(nested, dict):
+        value = nested.get("download_url")
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def download_to_file(url: str, destination: Path) -> int:
+    """
+    Streams a pre-signed `download_url` to `destination`.
+
+    The URL points at a third-party host (CDN/object storage), not the
+    Subscribr API, so this request never carries the `Authorization` header —
+    sending our bearer token to that host would leak the credential to a
+    party we do not control. The response is written to a sibling temp file
+    and renamed into place only once the full transfer succeeds, so a failed
+    or interrupted download never leaves a partial file at the requested path.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise CliError("The response's download_url is not an http(s) URL.", EXIT_VALIDATION)
+
+    destination = destination.expanduser()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = destination.with_name(f".{destination.name}.part-{os.getpid()}-{os.urandom(4).hex()}")
+
+    request_headers = {"User-Agent": f"subscribr-cli/{VERSION}"}
+    download_request = urllib.request.Request(url, headers=request_headers, method="GET")
+    context = ssl_context()
+    total_bytes = 0
+    try:
+        with urllib.request.urlopen(download_request, timeout=120, context=context) as response:
+            with temp_path.open("wb") as handle:
+                while True:
+                    chunk = response.read(1024 * 256)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    total_bytes += len(chunk)
+    except urllib.error.HTTPError as error:
+        temp_path.unlink(missing_ok=True)
+        # Never echo the URL: a signed URL's own error response can carry
+        # signing material in redirected/echoed query strings.
+        raise CliError(
+            f"Download failed: HTTP {error.code}. The signed URL may have expired; re-fetch it and retry.",
+            status_exit_code(error.code),
+        ) from error
+    except urllib.error.URLError as error:
+        temp_path.unlink(missing_ok=True)
+        reason = str(error.reason)
+        if permanent_network_failure(error.reason):
+            raise CliError(f"Cannot reach the download host: {reason}", EXIT_TRANSIENT) from error
+        raise CliError(f"Download temporarily failed: {reason}", EXIT_TRANSIENT) from error
+    except OSError as error:
+        temp_path.unlink(missing_ok=True)
+        raise CliError(f"Unable to write {destination}: {error}", EXIT_USAGE) from error
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+    temp_path.replace(destination)
+    return total_bytes
 
 
 def print_domains() -> None:
@@ -537,14 +620,33 @@ def run(args: list[str]) -> int:
     if any(argument in ("help", "--help", "-h") for argument in args[2:]):
         print_action_help(domain, args[1])
         return 0
-    command_args, wait = split_transport_options(args[2:])
+    command_args, wait, output = split_transport_options(args[2:])
     if wait:
         raise CliError(
             "Automatic waiting is unavailable. Poll with `operations get-operation --operation <uuid>` instead.",
             EXIT_USAGE,
         )
     method, path, body, headers = build_request(route, parse_extra_args(command_args))
-    print(json.dumps(request(method, path, body, headers), indent=2, ensure_ascii=False))
+    result = request(method, path, body, headers)
+
+    if output is not None:
+        download_url = find_download_url(result)
+        if download_url is None:
+            raise CliError(
+                "--output requires a response with a download_url; this operation's response did not include one.",
+                EXIT_USAGE,
+            )
+        destination = Path(output)
+        written_bytes = download_to_file(download_url, destination)
+        summary: dict[str, Any] = {"downloaded": True, "path": str(destination), "bytes": written_bytes}
+        data = result.get("data") if isinstance(result.get("data"), dict) else result
+        expires_at = data.get("expires_at") if isinstance(data, dict) else None
+        if isinstance(expires_at, str):
+            summary["url_expires_at"] = expires_at
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0
+
+    print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
