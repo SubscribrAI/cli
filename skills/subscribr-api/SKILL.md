@@ -90,11 +90,13 @@ Use a Team-bound API token (API key) with `video:read`; a token cannot switch Te
 
 The Video slice is default-off. Treat `video_capability_unavailable` as an explicit Team capability denial, `video_provisioning_required` as a missing connection, and `video_configuration_not_ready` as a retryable rollout/configuration state. Asset reads are owner/admin-only in this slice.
 
+Subscribr Video also ships generation, gated by `video:generate`. Call `videoQuoteVideo` for a priced estimate; it creates nothing and spends nothing, and supports no idempotency or concurrency, so quote as often as needed. Call `videoCreateVideo` to start a render; it requires `Idempotency-Key` and returns a pollable `operation`, not a finished video — poll it, then read the project with `videoGetProject`. Call `videoCancelVideo` to cancel a project in any non-terminal status; it also requires `Idempotency-Key`, refunds the full quoted charge upstream, and is an idempotent no-op on a project that already reached a terminal status.
+
 Subscribr Video also ships a Review & Fix facade for an existing project. Read a project with `videoListProjects`, `videoGetProject`, and `videoGetProjectDownload`. Read what can change with `videoGetEditableContent`, `videoGetRevisionManifest`, `videoListOverlayTemplates`, `videoGetQualityReport`, and `videoGetRevisionPass`. Stage or discard a change with `video:edit`: `videoAddOverlay`, `videoRemoveStagedOverlay`, `videoUpdateOverlay`, `videoRemoveOverlay`, `videoUpdateCaptions`, `videoRemoveMusic`, `videoEditSlideText`, `videoRegenerateVisual`, `videoShowPresenter`, and `videoDiscardEdit`. Every staging write needs `Idempotency-Key` and `If-Match`; call `videoGetEditableContent` or `videoGetRevisionManifest` first and send its response `ETag` back as `If-Match`.
 
 `videoApplyRevision` (`video:publish`) publishes the staged changes as a new immutable revision. This cannot be undone the way a staged edit can. Show the staged change list and stop for explicit user approval before you call it.
 
-Subscribr Video quote, project creation, render submission, cancellation, and artifact operations are not shipped. Do not invent them.
+Every Subscribr Video capability is named above by its `operationId`. If an operation is not named in this document, it does not exist yet — do not invent it.
 
 ## MCP
 
