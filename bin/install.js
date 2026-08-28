@@ -97,7 +97,7 @@ const cliDestination = withCli || cliDirectory
   ? path.resolve(process.cwd(), cliDirectory || ".subscribr-cli")
   : null;
 
-console.log("\n  @giltotherescue/subscribr-cli\n");
+console.log("\n  @subscribrai/cli\n");
 
 // These directories are installer-owned. Replacing them atomically avoids old
 // generated references surviving a contract update.
