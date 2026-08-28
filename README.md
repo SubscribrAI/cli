@@ -90,7 +90,7 @@ subscribr thumbnails create-thumbnail-generation --channel 42 \
 subscribr thumbnails get-thumbnail-generation --channel 42 --run-id 128
 subscribr thumbnails get-thumbnail-usage
 
-# Read-only access to Subscribr Video
+# Subscribr Video: reads, staging writes, and publish
 subscribr video list-capabilities
 subscribr video list-channels
 subscribr video get-channel --video-channel stch_01hz3k9pb1z7c5m2r6n0y4x2a2
