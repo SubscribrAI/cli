@@ -18,7 +18,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 METADATA_PATH = Path(__file__).resolve().parent / "skills" / "subscribr-api" / "references" / "operations.json"
 BODY_METHODS = {"POST", "PUT", "PATCH"}
 EXIT_AUTH = 2

@@ -1,0 +1,29 @@
+{
+  "name": "subscribr",
+  "description": "Subscribr — the all-in-one YouTube content engine, for you and your AI agents.",
+  "owner": {
+    "name": "Subscribr LLC",
+    "email": "hello@subscribr.ai",
+    "url": "https://subscribr.ai"
+  },
+  "plugins": [
+    {
+      "name": "subscribr",
+      "source": "./",
+      "description": "Subscribr — the all-in-one YouTube content engine. Research channels and videos, run a Projects board, generate thumbnails, write scripts in a channel's own voice, and read Subscribr Video assets.",
+      "version": "2.1.1",
+      "license": "MIT",
+      "homepage": "https://subscribr.ai/youtube-api",
+      "repository": "https://github.com/SubscribrAI/cli",
+      "keywords": [
+        "subscribr",
+        "youtube",
+        "scriptwriting",
+        "thumbnails",
+        "video",
+        "content",
+        "api"
+      ]
+    }
+  ]
+}

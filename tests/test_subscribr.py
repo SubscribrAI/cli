@@ -375,13 +375,19 @@ class TransportTrustTest(unittest.TestCase):
 
 class PackagingTest(unittest.TestCase):
     def test_declared_versions_stay_in_lockstep(self):
-        """package.json, plugin.json, and the CLI must agree, or `doctor` and the
-        User-Agent report a version the registry never published."""
+        """package.json, plugin.json, the Claude Code plugin manifests, and the CLI
+        must agree, or `doctor` and the User-Agent report a version the registry
+        never published, and `/plugin install` ships a version nobody can match."""
         package = json.loads((ROOT / "package.json").read_text())
         plugin = json.loads((ROOT / "plugin.json").read_text())
+        claude_plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
+        marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
 
         self.assertEqual(subscribr.VERSION, package["version"])
         self.assertEqual(subscribr.VERSION, plugin["version"])
+        self.assertEqual(subscribr.VERSION, claude_plugin["version"])
+        for entry in marketplace["plugins"]:
+            self.assertEqual(subscribr.VERSION, entry["version"])
 
 class RequestTest(unittest.TestCase):
     def setUp(self):

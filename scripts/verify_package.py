@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_PACKAGE_FILES = {
     "LICENSE",
     "README.md",
+    "CLI-REFERENCE.md",
     "bin/install.js",
     "bin/subscribr.js",
     "package.json",
@@ -33,6 +34,9 @@ ALLOWED_URL_HOSTS = {
     "agent-plugins.org",
     "github.com",
     "subscribr.ai",
+    # README badges and the npm package page they link to.
+    "img.shields.io",
+    "www.npmjs.com",
     # Documentation examples inside generated request-body samples.
     "example.com",
     "partner.example.com",
@@ -78,7 +82,7 @@ def main() -> None:
         if sha256(ROOT / relative) != expected:
             fail(f"artifact digest differs: {relative}")
 
-    declared = {"package.json", "plugin.json", "LICENSE", "README.md", "subscribr.py"}
+    declared = {"package.json", "plugin.json", "LICENSE", "README.md", "CLI-REFERENCE.md", "subscribr.py"}
     for entry in package["files"]:
         if entry.endswith("/"):
             declared.update(str(path.relative_to(ROOT)) for path in (ROOT / entry).rglob("*") if path.is_file())
@@ -135,7 +139,7 @@ def main() -> None:
     ):
         fail("public Video operations must remain read-only and require video:read")
 
-    print(f"package verification passed: 11 allowlisted files, {len(operation_ids)} operations, provenance current")
+    print(f"package verification passed: {len(EXPECTED_PACKAGE_FILES)} allowlisted files, {len(operation_ids)} operations, provenance current")
 
 
 if __name__ == "__main__":

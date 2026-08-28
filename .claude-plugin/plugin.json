@@ -1,8 +1,7 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "subscribr-cli",
+  "name": "subscribr",
+  "description": "Subscribr — the all-in-one YouTube content engine. Research channels and videos, run a Projects board, generate thumbnails, write scripts in a channel's own voice, and read Subscribr Video assets.",
   "version": "2.1.1",
-  "description": "Generated CLI transport and agent skill for the Subscribr Customer API.",
   "author": {
     "name": "Subscribr LLC",
     "email": "hello@subscribr.ai",
@@ -14,10 +13,10 @@
   "keywords": [
     "subscribr",
     "youtube",
-    "api",
-    "cli",
-    "agent-skill",
-    "agent-plugin",
-    "mcp"
+    "scriptwriting",
+    "thumbnails",
+    "video",
+    "content",
+    "api"
   ]
 }

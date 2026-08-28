@@ -1,6 +1,6 @@
 {
-  "name": "@giltotherescue/subscribr-cli",
-  "version": "2.1.0",
+  "name": "@subscribrai/cli",
+  "version": "2.1.1",
   "description": "Generated CLI transport and agent skill for the Subscribr Customer API",
   "bin": {
     "subscribr": "bin/subscribr.js",
@@ -30,7 +30,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/giltotherescue/subscribr-cli.git"
+    "url": "git+https://github.com/SubscribrAI/cli.git"
   },
   "homepage": "https://subscribr.ai/youtube-api",
   "files": [
@@ -39,6 +39,7 @@
     "skills/",
     "subscribr.py",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CLI-REFERENCE.md"
   ]
 }
