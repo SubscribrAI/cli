@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import re
@@ -354,6 +355,84 @@ def find_download_url(payload: Any) -> str | None:
     return None
 
 
+def is_public_download_address(address: str) -> bool:
+    """
+    True for an address a `download_url` may legitimately resolve to.
+
+    False for private (RFC 1918/4193), loopback, link-local (this is what
+    covers a cloud metadata endpoint — 169.254.169.254 and its IPv6
+    equivalent are both link-local), multicast, reserved, or unspecified
+    addresses.
+    """
+    parsed = ipaddress.ip_address(address)
+    return not (
+        parsed.is_private
+        or parsed.is_loopback
+        or parsed.is_link_local
+        or parsed.is_multicast
+        or parsed.is_reserved
+        or parsed.is_unspecified
+    )
+
+
+def ensure_public_download_host(url: str) -> None:
+    """
+    Refuses to let a download proceed anywhere that isn't a public host.
+
+    A `download_url` is supposed to name a public storage/CDN object; this
+    is what stops a compromised or tampered API response from pointing the
+    operator's machine at an internal service or the cloud metadata
+    endpoint instead.
+
+    This resolves and classifies the address rather than checking the
+    hostname against an allowlist. Signed URLs legitimately come from more
+    than one storage host — the account's storage provider can rotate, use
+    a regional bucket, or sit behind a CDN domain — and that set is not
+    ours to enumerate here; a strict allowlist would eventually reject a
+    legitimate signed URL. Classifying the resolved address is proportionate
+    to the actual threat, which is a tampered *destination*, not an
+    untrusted *provider*.
+
+    This does not defend against DNS rebinding between this check and the
+    connection urllib opens moments later — closing that would mean pinning
+    the resolved address for the request itself, which is more than this
+    hardening pass is proportionate to against a threat that already
+    requires a compromised or tampered backend response.
+    """
+    hostname = urllib.parse.urlparse(url).hostname
+    if not hostname:
+        raise CliError("The response's download_url has no host.", EXIT_VALIDATION)
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as error:
+        raise CliError(f"Cannot resolve the download host: {error}", EXIT_TRANSIENT) from error
+    for *_rest, sockaddr in resolved:
+        address = sockaddr[0]
+        if not is_public_download_address(address):
+            raise CliError(
+                f"Refusing to download from {hostname}: it resolves to {address}, which is not "
+                "a public address.",
+                EXIT_VALIDATION,
+            )
+
+
+class PublicHostRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """
+    Re-validates scheme and destination on every redirect hop.
+
+    Without this, a first request to an approved public host could still be
+    redirected by a 30x response to an internal address or downgraded to a
+    non-http(s) scheme, and urllib's default redirect handling would follow
+    it without another look.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlparse(newurl).scheme not in ("http", "https"):
+            raise CliError("A download redirect pointed at a non-http(s) URL.", EXIT_VALIDATION)
+        ensure_public_download_host(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def download_to_file(url: str, destination: Path) -> int:
     """
     Streams a pre-signed `download_url` to `destination`.
@@ -364,10 +443,16 @@ def download_to_file(url: str, destination: Path) -> int:
     party we do not control. The response is written to a sibling temp file
     and renamed into place only once the full transfer succeeds, so a failed
     or interrupted download never leaves a partial file at the requested path.
+
+    The destination host — and, on redirect, every host the response sends
+    it to next — must resolve to a public address: see
+    `ensure_public_download_host` for why this is a resolved-address check
+    rather than a host allowlist.
     """
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise CliError("The response's download_url is not an http(s) URL.", EXIT_VALIDATION)
+    ensure_public_download_host(url)
 
     destination = destination.expanduser()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -376,9 +461,16 @@ def download_to_file(url: str, destination: Path) -> int:
     request_headers = {"User-Agent": f"subscribr-cli/{VERSION}"}
     download_request = urllib.request.Request(url, headers=request_headers, method="GET")
     context = ssl_context()
+    # Installed (rather than passed as urlopen's own `context=`) so our
+    # redirect handler — which must re-validate every hop's destination —
+    # participates too; urlopen's own `context=` argument builds a fresh,
+    # bare-default opener that would silently drop it.
+    urllib.request.install_opener(
+        urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), PublicHostRedirectHandler())
+    )
     total_bytes = 0
     try:
-        with urllib.request.urlopen(download_request, timeout=120, context=context) as response:
+        with urllib.request.urlopen(download_request, timeout=120) as response:
             with temp_path.open("wb") as handle:
                 while True:
                     chunk = response.read(1024 * 256)

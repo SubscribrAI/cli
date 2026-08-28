@@ -52,15 +52,56 @@ BANNED_URL_HOSTS = {"subscribr.com", "www.subscribr.com"}
 # idempotency AND concurrency both unsupported — it spends nothing and there
 # is nothing to retry into); and a generation write (`videoCreateVideo`,
 # `videoCancelVideo`, `video:generate`, idempotency required but concurrency
-# unsupported — there is no revision to conflict with). A new operation that
-# matches none of these shapes — or one that moves between them — must fail
-# this check loudly rather than pass unnoticed.
+# unsupported — there is no revision to conflict with).
+#
+# Every operation id Subscribr Video currently exposes is named below, once,
+# under the shape a human reviewed it against. This is a fail-closed
+# inventory, not a cache: membership decides eligibility. A shape rule alone
+# is not enough, because a *new* operation can legitimately reuse an existing
+# shape (an edit-write's idempotency/concurrency pair, say) while being a
+# different, unreviewed action — so `main()` first checks every id in
+# `operations.json` against `VIDEO_KNOWN_OPERATIONS` and fails loudly on
+# anything absent, before any shape rule ever runs. A new operation must be
+# added to exactly one set here, by a human who read its abilities and
+# write_safety, before it can ship.
+VIDEO_READ_OPERATIONS = {
+    "videoListCapabilities", "videoListChannels", "videoGetChannel",
+    "videoListVoices", "videoGetVoice", "videoListAvatars", "videoGetAvatar",
+    "videoListMediaAssets", "videoGetMediaAsset", "videoListProjects",
+    "videoGetProject", "videoGetProjectDownload", "videoGetEditableContent",
+    "videoGetRevisionManifest", "videoListOverlayTemplates",
+    "videoGetQualityReport", "videoGetRevisionPass",
+}
+VIDEO_EDIT_WRITE_OPERATIONS = {
+    "videoAddOverlay", "videoRemoveStagedOverlay", "videoUpdateOverlay",
+    "videoRemoveOverlay", "videoUpdateCaptions", "videoRemoveMusic",
+    "videoEditSlideText", "videoRegenerateVisual", "videoShowPresenter",
+    "videoDiscardEdit",
+}
 VIDEO_PUBLISH_OPERATIONS = {"videoApplyRevision"}
 VIDEO_QUOTE_OPERATIONS = {"videoQuoteVideo"}
 VIDEO_GENERATE_WRITE_OPERATIONS = {"videoCreateVideo", "videoCancelVideo"}
+VIDEO_KNOWN_OPERATIONS = (
+    VIDEO_READ_OPERATIONS
+    | VIDEO_EDIT_WRITE_OPERATIONS
+    | VIDEO_PUBLISH_OPERATIONS
+    | VIDEO_QUOTE_OPERATIONS
+    | VIDEO_GENERATE_WRITE_OPERATIONS
+)
 VIDEO_EDIT_WRITE_SAFETY = {"idempotency": "required", "concurrency": "required", "retry": "same-key"}
 VIDEO_QUOTE_WRITE_SAFETY = {"idempotency": "unsupported", "concurrency": "unsupported", "retry": "never"}
 VIDEO_GENERATE_WRITE_SAFETY = {"idempotency": "required", "concurrency": "unsupported", "retry": "same-key"}
+# An id containing one of these words reads as irreversible or
+# administratively privileged (permanent deletion, purge, wipe, revocation,
+# termination of something outside the caller's own request). Such an
+# operation must never validate merely because it happens to share the
+# ordinary edit-write shape — it has to be reviewed and declared under
+# VIDEO_PUBLISH_OPERATIONS (or a new, equally explicit, equally reviewed
+# category) instead. This is a second, independent gate: even a human who
+# miscategorizes the id into VIDEO_EDIT_WRITE_OPERATIONS above still trips it.
+IRREVERSIBLE_OPERATION_ID_PATTERN = re.compile(
+    r"(?i)delete|purge|destroy|terminate|wipe|erase|revoke|permanent"
+)
 SECRET = re.compile(r"(?:sk_live_|sk_test_|ghp_|github_pat_)[A-Za-z0-9_-]{16,}")
 URL = re.compile(r"https?://[^\s<>\"'`]+")
 
@@ -137,18 +178,49 @@ def main() -> None:
     }
     if not video_operations:
         fail("operation metadata is missing the public Video operation surface")
-    for named, label in (
-        (VIDEO_PUBLISH_OPERATIONS, "videoApplyRevision"),
-        (VIDEO_QUOTE_OPERATIONS, "videoQuoteVideo"),
-        (VIDEO_GENERATE_WRITE_OPERATIONS, "videoCreateVideo/videoCancelVideo"),
-    ):
-        if named - set(video_operations):
-            fail(f"operation metadata is missing {label}")
+
+    category_overlap = sum(
+        len(category)
+        for category in (
+            VIDEO_READ_OPERATIONS,
+            VIDEO_EDIT_WRITE_OPERATIONS,
+            VIDEO_PUBLISH_OPERATIONS,
+            VIDEO_QUOTE_OPERATIONS,
+            VIDEO_GENERATE_WRITE_OPERATIONS,
+        )
+    )
+    if category_overlap != len(VIDEO_KNOWN_OPERATIONS):
+        fail(
+            "VIDEO_*_OPERATIONS sets in scripts/verify_package.py overlap — an operation id is "
+            "listed under more than one shape. Fix the sets themselves before trusting this check."
+        )
+
+    unreviewed = set(video_operations) - VIDEO_KNOWN_OPERATIONS
+    if unreviewed:
+        fail(
+            f"unreviewed Video operation(s) {sorted(unreviewed)} in operations.json: add each one "
+            "to exactly one of VIDEO_READ_OPERATIONS / VIDEO_EDIT_WRITE_OPERATIONS / "
+            "VIDEO_PUBLISH_OPERATIONS / VIDEO_QUOTE_OPERATIONS / VIDEO_GENERATE_WRITE_OPERATIONS in "
+            "scripts/verify_package.py — after a human has read its abilities and write_safety and "
+            "confirmed which shape it actually is. Sharing an existing shape's fields is not enough "
+            "to pass; the id must be named."
+        )
+    retired = VIDEO_KNOWN_OPERATIONS - set(video_operations)
+    if retired:
+        fail(
+            f"operation metadata is missing previously-reviewed Video operation(s) {sorted(retired)}: "
+            "if this was a deliberate removal, delete the id from its VIDEO_*_OPERATIONS set in "
+            "scripts/verify_package.py; otherwise this is unexplained contract drift."
+        )
 
     for operation_id, operation in video_operations.items():
-        if operation["method"] == "GET":
-            if operation["abilities"] != ["video:read"] or operation["write_safety"] is not None:
-                fail(f"public Video read {operation_id} must require only video:read and carry no write safety")
+        if operation_id in VIDEO_READ_OPERATIONS:
+            if (
+                operation["method"] != "GET"
+                or operation["abilities"] != ["video:read"]
+                or operation["write_safety"] is not None
+            ):
+                fail(f"public Video read {operation_id} must be GET, require only video:read, and carry no write safety")
             continue
 
         if operation_id in VIDEO_QUOTE_OPERATIONS:
@@ -161,14 +233,25 @@ def main() -> None:
                 fail(f"{operation_id} must require video:generate with idempotency required and concurrency unsupported")
             continue
 
-        if operation["write_safety"] != VIDEO_EDIT_WRITE_SAFETY:
-            fail(f"public Video write {operation_id} must require both idempotency and concurrency")
-
         if operation_id in VIDEO_PUBLISH_OPERATIONS:
-            if operation["abilities"] != ["video:publish"]:
-                fail(f"{operation_id} must require video:publish")
-        elif operation["abilities"] != ["video:edit"]:
-            fail(f"public Video write {operation_id} must require video:edit")
+            if operation["write_safety"] != VIDEO_EDIT_WRITE_SAFETY or operation["abilities"] != ["video:publish"]:
+                fail(f"{operation_id} must require video:publish with idempotency and concurrency both required")
+            continue
+
+        # Only VIDEO_EDIT_WRITE_OPERATIONS ids reach here — every other set
+        # returned above, and the inventory checks above already rejected
+        # anything not in one of the five sets.
+        if IRREVERSIBLE_OPERATION_ID_PATTERN.search(operation_id):
+            fail(
+                f"{operation_id} is declared as an ordinary edit write, but its id reads as an "
+                "irreversible or privileged action. If that reading is correct, move it out of "
+                "VIDEO_EDIT_WRITE_OPERATIONS into VIDEO_PUBLISH_OPERATIONS (video:publish) in "
+                "scripts/verify_package.py — do not let it validate as an ordinary edit. If the "
+                "reading is a false positive, that is still a decision a human must record, not "
+                "something this check should assume."
+            )
+        if operation["write_safety"] != VIDEO_EDIT_WRITE_SAFETY or operation["abilities"] != ["video:edit"]:
+            fail(f"public Video write {operation_id} must require video:edit with idempotency and concurrency both required")
 
     print(f"package verification passed: {len(EXPECTED_PACKAGE_FILES)} allowlisted files, {len(operation_ids)} operations, provenance current")
 
