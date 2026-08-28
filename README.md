@@ -26,6 +26,7 @@ A human can do all of this from the website. An AI agent can do the same work th
 - **Keep every script on-brand.** Validate and commit a Voice Profile once, so every script that follows matches your Channel's tone.
 - **Hand it to an AI agent.** Install this as a skill for Claude Code, or another AI coding agent, so the agent can do all of the above for you, using your own Team's permissions.
 - **Review and fix a rendered video.** Read the editable content and revision manifest, stage overlay, caption, music, slide, and visual edits, then publish a new revision with `apply-revision`.
+- **Generate a new video.** Get a credit quote up front, submit with an idempotency key so a retried submit never double-bills, and cancel any time before it finishes for a full refund.
 
 ## Install
 
@@ -90,6 +91,13 @@ subscribr thumbnails create-thumbnail-generation --channel 42 \
 subscribr thumbnails get-thumbnail-generation --channel 42 --run-id 128
 subscribr thumbnails get-thumbnail-usage
 
+# Subscribr Video: quote, create, and cancel a generation
+subscribr video quote-video --name "Explainer" --script @script.txt
+subscribr video create-video --name "Explainer" --script @script.txt \
+  --idempotency-key create-1
+subscribr video cancel-video --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --idempotency-key cancel-1
+
 # Subscribr Video: reads, staging writes, and publish
 subscribr video list-capabilities
 subscribr video list-channels
@@ -121,9 +129,13 @@ subscribr <domain> <action> --help      # every field, its type, and an example
 
 ## Subscribr Video: what's available today
 
-The `video` domain exposes capability discovery; Channel, custom voice, custom avatar, and reference media reads; Project reads (project, download, editable content, revision manifest, overlay templates, quality report, revision pass); and the Review & Fix revision-staging writes (add/update/remove overlay, remove a staged overlay, update captions, remove music, edit slide text, regenerate a visual, show the presenter, discard a staged edit) plus `apply-revision`, which publishes a new immutable video revision.
+The `video` domain exposes capability discovery; Channel, custom voice, custom avatar, and reference media reads; Project reads (project, download, editable content, revision manifest, overlay templates, quality report, revision pass); the Review & Fix revision-staging writes (add/update/remove overlay, remove a staged overlay, update captions, remove music, edit slide text, regenerate a visual, show the presenter, discard a staged edit) plus `apply-revision`, which publishes a new immutable video revision; and `quote-video`/`create-video`/`cancel-video`, for generating a new video.
 
-Reads require `video:read`. Staging and discard writes require `video:edit`. `apply-revision` requires `video:publish`. Every write requires `--idempotency-key` and `--if-match` with the current strong ETag — read the ETag from `video get-editable-content` or `video get-revision-manifest` before staging a change.
+Reads require `video:read`. Staging and discard writes require `video:edit`. `apply-revision` requires `video:publish`. Generating a video requires `video:generate`, a separate ability — a token can be scoped to edit and publish without ever being able to spend credits, or the reverse.
+
+Every staging write and `apply-revision` require `--idempotency-key` and `--if-match` with the current strong ETag — read the ETag from `video get-editable-content` or `video get-revision-manifest` before staging a change. `create-video` and `cancel-video` require `--idempotency-key` only; `quote-video` requires neither.
+
+`quote-video` returns `required_credits` and spends nothing — quote and charge always agree. `create-video` bills on submit; a replayed submit with the same idempotency key converges on the same video instead of billing twice, and it returns `202` with an operation to poll with `operations get-operation`, the same as `apply-revision`. `cancel-video` works at any point before the video finishes, is a harmless no-op once it has, and refunds the full charge.
 
 This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
 
