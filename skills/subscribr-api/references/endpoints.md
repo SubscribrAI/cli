@@ -129,6 +129,7 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `GET` | `/api/v1/video/media-assets` | `videoListMediaAssets` | `video:read` | read |
 | `GET` | `/api/v1/video/media-assets/{mediaAsset}` | `videoGetMediaAsset` | `video:read` | read |
 | `GET` | `/api/v1/video/projects` | `videoListProjects` | `video:read` | read |
+| `POST` | `/api/v1/video/projects` | `videoCreateVideo` | `video:generate` | idempotency=required; concurrency=unsupported |
 | `GET` | `/api/v1/video/projects/{project}` | `videoGetProject` | `video:read` | read |
 | `GET` | `/api/v1/video/projects/{project}/download` | `videoGetProjectDownload` | `video:read` | read |
 | `GET` | `/api/v1/video/projects/{project}/editable-content` | `videoGetEditableContent` | `video:read` | read |
@@ -147,6 +148,8 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `PUT` | `/api/v1/video/projects/{project}/revision/presenter` | `videoShowPresenter` | `video:edit` | idempotency=required; concurrency=required |
 | `DELETE` | `/api/v1/video/projects/{project}/revision/items/{item}` | `videoDiscardEdit` | `video:edit` | idempotency=required; concurrency=required |
 | `POST` | `/api/v1/video/projects/{project}/revision/apply` | `videoApplyRevision` | `video:publish` | idempotency=required; concurrency=required |
+| `POST` | `/api/v1/video/projects/quote` | `videoQuoteVideo` | `video:generate` | idempotency=unsupported; concurrency=unsupported |
+| `POST` | `/api/v1/video/projects/{project}/cancel` | `videoCancelVideo` | `video:generate` | idempotency=required; concurrency=unsupported |
 
 ## Voices
 

@@ -189,11 +189,22 @@ Asynchronous operations return an operation ID. Poll it with
 ### Subscribr Video commands
 
 Reads need `video:read`. Staging and discard writes need `video:edit`.
-Publishing a revision needs `video:publish`. Every write requires
-`--idempotency-key` and `--if-match` with the current strong `ETag`.
+Publishing a revision needs `video:publish`. Generating a video needs
+`video:generate` — a separate ability from `video:edit`/`video:publish`, so a
+token can be scoped to stage and publish edits without ever being able to
+spend credits, or the other way around.
+
+Every staging write and `apply-revision` require `--idempotency-key` and
+`--if-match` with the current strong `ETag`. `create-video` and
+`cancel-video` require `--idempotency-key` only — there is no existing
+revision for either to hold `--if-match` against. `quote-video` requires
+neither: it has no state to key and nothing to retry into.
 
 | CLI command | Operation | Notes |
 |---|---|---|
+| `video quote-video --name <n> --script <s> ...` | `videoQuoteVideo` | returns `required_credits` and spends nothing; quote and charge always agree |
+| `video create-video --name <n> --script <s> ... --idempotency-key <key>` | `videoCreateVideo` | a replayed submit with the same key converges on the same video instead of billing twice; returns `202` with an operation |
+| `video cancel-video --project <id> --idempotency-key <key>` | `videoCancelVideo` | works at any point before the video finishes, is a harmless no-op once it has, and refunds the full charge |
 | `video list-capabilities` | `videoListCapabilities` | start here |
 | `video list-channels` | `videoListChannels` | |
 | `video get-channel --video-channel <id>` | `videoGetChannel` | |
@@ -223,9 +234,9 @@ Publishing a revision needs `video:publish`. Every write requires
 | `video discard-edit --project <id> --item <id>` | `videoDiscardEdit` | discard any staged edit by its item id |
 | `video apply-revision --project <id> ...` | `videoApplyRevision` | publishes a new, immutable video revision; confirm with the user first |
 
-`video apply-revision` returns `202` with an operation. Poll it with
-`operations get-operation --operation <uuid>`, the same generic poller used
-everywhere else in this CLI.
+`video apply-revision` and `video create-video` both return `202` with an
+operation. Poll either with `operations get-operation --operation <uuid>`,
+the same generic poller used everywhere else in this CLI.
 
 ### The Review & Fix loop
 

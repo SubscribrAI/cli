@@ -1681,6 +1681,132 @@
         "retry": "same-key"
       }
     },
+    "video.cancel-video": {
+      "abilities": [
+        "video:generate"
+      ],
+      "body": {
+        "required": [],
+        "fields": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "body_required": false,
+        "example": {
+          "reason": "No longer needed"
+        }
+      },
+      "method": "POST",
+      "operation_id": "videoCancelVideo",
+      "path": "/api/v1/video/projects/{project}/cancel",
+      "query_parameters": [],
+      "summary": "Cancel a Subscribr Video project",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "video.create-video": {
+      "abilities": [
+        "video:generate"
+      ],
+      "body": {
+        "required": [
+          "name",
+          "script"
+        ],
+        "fields": {
+          "avatar_engine": {
+            "type": "string",
+            "enum": [
+              "avatar_iii",
+              "avatar_iv",
+              "avatar_v"
+            ]
+          },
+          "caption_style": {
+            "type": "string"
+          },
+          "captions_enabled": {
+            "type": "boolean"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "integer"
+          },
+          "channel_public_id": {
+            "type": "string"
+          },
+          "client_reference_id": {
+            "type": "string"
+          },
+          "editing_style": {
+            "type": "string"
+          },
+          "editorial_rhythm_pace_profile": {
+            "type": "string"
+          },
+          "library_asset_public_ids": {
+            "type": "string[]"
+          },
+          "music_enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "narration_enabled": {
+            "type": "boolean"
+          },
+          "script": {
+            "type": "string"
+          },
+          "slideshow_max_seconds": {
+            "type": "integer"
+          },
+          "source_materials": {
+            "type": "object[]"
+          },
+          "talking_head_source": {
+            "type": "string"
+          },
+          "visual_mix": {
+            "type": "string"
+          },
+          "voice_delivery_mode": {
+            "type": "string"
+          },
+          "voice_id": {
+            "type": "string"
+          },
+          "voice_provider": {
+            "type": "string"
+          },
+          "voice_speaking_rate": {
+            "type": "number"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "Example title",
+          "script": "This is an example script for a short video."
+        }
+      },
+      "method": "POST",
+      "operation_id": "videoCreateVideo",
+      "path": "/api/v1/video/projects",
+      "query_parameters": [],
+      "summary": "Create a Subscribr Video project",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
     "video.discard-edit": {
       "abilities": [
         "video:edit"
@@ -1951,6 +2077,105 @@
       ],
       "summary": "List custom voices available to the current team",
       "write_safety": null
+    },
+    "video.quote-video": {
+      "abilities": [
+        "video:generate"
+      ],
+      "body": {
+        "required": [
+          "name",
+          "script"
+        ],
+        "fields": {
+          "avatar_engine": {
+            "type": "string",
+            "enum": [
+              "avatar_iii",
+              "avatar_iv",
+              "avatar_v"
+            ]
+          },
+          "caption_style": {
+            "type": "string"
+          },
+          "captions_enabled": {
+            "type": "boolean"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "integer"
+          },
+          "channel_public_id": {
+            "type": "string"
+          },
+          "client_reference_id": {
+            "type": "string"
+          },
+          "editing_style": {
+            "type": "string"
+          },
+          "editorial_rhythm_pace_profile": {
+            "type": "string"
+          },
+          "library_asset_public_ids": {
+            "type": "string[]"
+          },
+          "music_enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "narration_enabled": {
+            "type": "boolean"
+          },
+          "script": {
+            "type": "string"
+          },
+          "slideshow_max_seconds": {
+            "type": "integer"
+          },
+          "source_materials": {
+            "type": "object[]"
+          },
+          "talking_head_source": {
+            "type": "string"
+          },
+          "visual_mix": {
+            "type": "string"
+          },
+          "voice_delivery_mode": {
+            "type": "string"
+          },
+          "voice_id": {
+            "type": "string"
+          },
+          "voice_provider": {
+            "type": "string"
+          },
+          "voice_speaking_rate": {
+            "type": "number"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "name": "Example title",
+          "script": "This is an example script for a short video."
+        }
+      },
+      "method": "POST",
+      "operation_id": "videoQuoteVideo",
+      "path": "/api/v1/video/projects/quote",
+      "query_parameters": [],
+      "summary": "Quote a Subscribr Video generation",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "unsupported",
+        "retry": "never"
+      }
     },
     "video.regenerate-visual": {
       "abilities": [
@@ -2691,7 +2916,10 @@
     "videoListMediaAssets",
     "videoGetMediaAsset",
     "videoListProjects",
+    "videoCreateVideo",
+    "videoQuoteVideo",
     "videoGetProject",
+    "videoCancelVideo",
     "videoGetProjectDownload",
     "videoGetEditableContent",
     "videoListOverlayTemplates",
@@ -2718,6 +2946,6 @@
     "updateWebhook",
     "testWebhook"
   ],
-  "source_sha256": "e2ad6769fed4e97446c7d76e626e46cd3cc531be3207d2736dcf1ee5ce523fd0",
+  "source_sha256": "87282ad138e378fa0d12d1866383fd4d2a3db1efffbe2b3ce0186560ac0cd2a4",
   "supported_contract_range": "^1.0.0"
 }
