@@ -31,6 +31,15 @@ python3 scripts/sync_contract.py \
 
 `scripts/cli-addendum.md` is the one exception: it's this package's own content, appended to Main's canonical `SKILL.md` body during regeneration. Edit it directly for CLI-specific guidance.
 
+## This repository is the CLI path, not the MCP path
+
+Subscribr reaches agents two ways, and they belong to different repositories:
+
+- **This repository** ships the `subscribr` CLI and the `subscribr-api` skill, for agents that automate the REST API. Its Claude Code plugin is named `subscribr-cli`.
+- **The Main application repository** ships the hosted MCP connector, and a separate Claude Code plugin named `subscribr` that wires it up. That one goes to Anthropic's directory.
+
+Do not add MCP server configuration here, and do not rename this plugin back to `subscribr`. Both names existed once, and they collided.
+
 ## Releasing
 
 Follow [RELEASING.md](RELEASING.md). Two steps need a human: `npm publish` asks for a one-time password in a browser, and `main` requires a passing CI check before a merge.

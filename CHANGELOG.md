@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the Claude Code plugin from `subscribr` to `subscribr-cli`, and adopted the official plugin manifest schema. The Subscribr app publishes a separate `subscribr` plugin for its hosted MCP connector, and the two names collided. This one is the CLI and its API skill; that one is the MCP connector. The npm package is unaffected, because the plugin manifests do not ship in it.
+
 ## [2.1.1] - 2026-08-27
 
 The first release with a full public project setup. No behavior changed: the CLI, its commands, and its API surface are identical to 2.1.0.
@@ -16,7 +20,7 @@ The first release with a full public project setup. No behavior changed: the CLI
 - `CONTRIBUTING.md` and `SECURITY.md`.
 - `CHANGELOG.md`, starting with this release.
 - `CLI-REFERENCE.md`, holding the request conventions, exit codes, retry and idempotency model, and the contract regeneration steps.
-- A Claude Code plugin manifest, at `.claude-plugin/`. You can now install the skill with `/plugin marketplace add https://github.com/SubscribrAI/cli`, as an alternative to the npm path. A test keeps its version in step with the other manifests.
+- A Claude Code plugin manifest, at `.claude-plugin/`. You can now install the skill with `/plugin marketplace add https://github.com/SubscribrAI/cli`, as an alternative to the npm path. A test keeps its version in step with the other manifests. (Renamed to `subscribr-cli` after this release; see Unreleased.)
 - Documentation for the `thumbnails` domain, which the CLI has always shipped but never described.
 - npm version and license badges in the README.
 

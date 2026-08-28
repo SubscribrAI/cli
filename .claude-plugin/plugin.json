@@ -1,7 +1,9 @@
 {
-  "name": "subscribr",
-  "description": "Subscribr — the all-in-one YouTube content engine. Research channels and videos, run a Projects board, generate thumbnails, write scripts in a channel's own voice, and read Subscribr Video assets.",
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "subscribr-cli",
+  "displayName": "Subscribr CLI",
   "version": "2.1.1",
+  "description": "The Subscribr CLI and its API skill, for agents that automate YouTube content work over the REST API.",
   "author": {
     "name": "Subscribr LLC",
     "email": "hello@subscribr.ai",
@@ -18,5 +20,6 @@
     "video",
     "content",
     "api"
-  ]
+  ],
+  "skills": "./skills/"
 }
