@@ -66,7 +66,9 @@ chore(skill): resync after a contract change
 
 ## Releases
 
-Maintainers publish releases. The version in `package.json`, `plugin.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and `subscribr.py` must always agree; a test enforces this. Record every user-visible change in [CHANGELOG.md](CHANGELOG.md).
+Maintainers publish releases. Follow [RELEASING.md](RELEASING.md) — the order of the steps matters, and it lists the failures that are easy to hit.
+
+The version in `package.json`, `plugin.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and `subscribr.py` must always agree; a test enforces this. Record every user-visible change in [CHANGELOG.md](CHANGELOG.md).
 
 ## Reporting a security problem
 

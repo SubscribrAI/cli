@@ -31,6 +31,10 @@ python3 scripts/sync_contract.py \
 
 `scripts/cli-addendum.md` is the one exception: it's this package's own content, appended to Main's canonical `SKILL.md` body during regeneration. Edit it directly for CLI-specific guidance.
 
+## Releasing
+
+Follow [RELEASING.md](RELEASING.md). Two steps need a human: `npm publish` asks for a one-time password in a browser, and `main` requires a passing CI check before a merge.
+
 ## Other invariants tests enforce
 
 - `package.json`, `plugin.json`, and the `VERSION` constant in `subscribr.py` must agree. `test_declared_versions_stay_in_lockstep` checks this.
