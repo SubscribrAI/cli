@@ -1,14 +1,14 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "subscribr-cli",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Generated CLI transport and agent skill for the Subscribr Customer API.",
   "author": {
     "name": "Subscribr LLC",
     "email": "hello@subscribr.ai",
-    "url": "https://subscribr.com"
+    "url": "https://subscribr.ai"
   },
-  "homepage": "https://subscribr.com/youtube-api",
+  "homepage": "https://subscribr.ai/youtube-api",
   "repository": "https://github.com/giltotherescue/subscribr-cli",
   "license": "MIT",
   "keywords": [

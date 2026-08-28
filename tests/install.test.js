@@ -96,7 +96,12 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
 
   const version = runCli(destination, "version");
   assert.equal(version.status, 0, version.stderr);
-  assert.match(version.stdout, /2\.0\.0/);
+  // Read the expected version from package.json rather than pinning it, so a
+  // release bump does not need a test edit.
+  const declaredVersion = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"),
+  ).version;
+  assert.equal(version.stdout.trim(), declaredVersion);
 
   const help = runCli(destination, "help");
   assert.equal(help.status, 0, help.stderr);

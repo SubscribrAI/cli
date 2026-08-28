@@ -26,7 +26,20 @@ EXPECTED_PACKAGE_FILES = {
     "skills/subscribr-api/references/provenance.json",
     "subscribr.py",
 }
-ALLOWED_URL_HOSTS = {"agent-plugins.org", "subscribr.ai", "subscribr.com", "github.com"}
+# Hosts a shipped file may name. `subscribr.com` is deliberately absent and
+# deliberately banned below: it is a parked third-party domain, and this
+# allowlist blessing it is why it reached customers twice.
+ALLOWED_URL_HOSTS = {
+    "agent-plugins.org",
+    "github.com",
+    "subscribr.ai",
+    # Documentation examples inside generated request-body samples.
+    "example.com",
+    "partner.example.com",
+    "youtube.com",
+    "www.youtube.com",
+}
+BANNED_URL_HOSTS = {"subscribr.com", "www.subscribr.com"}
 VIDEO_READ_OPERATIONS = {
     "videoGetAvatar",
     "videoGetChannel",
@@ -86,7 +99,12 @@ def main() -> None:
         if SECRET.search(path.read_text(errors="ignore")):
             fail(f"possible secret in {relative}")
         for raw_url in URL.findall(path.read_text(errors="ignore")):
-            host = urlparse(raw_url.rstrip(".,;:)]}")).hostname
+            host = urlparse(raw_url.rstrip(".,;:)]}`")).hostname
+            if host in BANNED_URL_HOSTS:
+                fail(
+                    f"banned URL host {host!r} in {relative}: we do not control it, "
+                    "and a token sent there is a leaked credential. Use subscribr.ai."
+                )
             if host not in ALLOWED_URL_HOSTS:
                 fail(f"unapproved URL host {host!r} in {relative}")
 
