@@ -44,15 +44,23 @@ ALLOWED_URL_HOSTS = {
     "www.youtube.com",
 }
 BANNED_URL_HOSTS = {"subscribr.com", "www.subscribr.com"}
-# The Video slice has three shapes and each one is fail-closed against drift:
-# a read (GET, `video:read`, no write safety), a staging/discard write
-# (non-GET, `video:edit`, idempotency AND concurrency both required), and the
+# The Video slice has five shapes and each one is fail-closed against drift:
+# a read (GET, `video:read`, no write safety); a staging/discard write
+# (non-GET, `video:edit`, idempotency AND concurrency both required); the
 # single publish write (`videoApplyRevision`, `video:publish`, same write
-# safety as any other write). A new operation that matches none of these
-# shapes — or a read that gained write safety, or a write that lost it — must
-# fail this check loudly rather than pass unnoticed.
+# safety as an edit write); a quote (`videoQuoteVideo`, `video:generate`,
+# idempotency AND concurrency both unsupported — it spends nothing and there
+# is nothing to retry into); and a generation write (`videoCreateVideo`,
+# `videoCancelVideo`, `video:generate`, idempotency required but concurrency
+# unsupported — there is no revision to conflict with). A new operation that
+# matches none of these shapes — or one that moves between them — must fail
+# this check loudly rather than pass unnoticed.
 VIDEO_PUBLISH_OPERATIONS = {"videoApplyRevision"}
-VIDEO_WRITE_SAFETY = {"idempotency": "required", "concurrency": "required", "retry": "same-key"}
+VIDEO_QUOTE_OPERATIONS = {"videoQuoteVideo"}
+VIDEO_GENERATE_WRITE_OPERATIONS = {"videoCreateVideo", "videoCancelVideo"}
+VIDEO_EDIT_WRITE_SAFETY = {"idempotency": "required", "concurrency": "required", "retry": "same-key"}
+VIDEO_QUOTE_WRITE_SAFETY = {"idempotency": "unsupported", "concurrency": "unsupported", "retry": "never"}
+VIDEO_GENERATE_WRITE_SAFETY = {"idempotency": "required", "concurrency": "unsupported", "retry": "same-key"}
 SECRET = re.compile(r"(?:sk_live_|sk_test_|ghp_|github_pat_)[A-Za-z0-9_-]{16,}")
 URL = re.compile(r"https?://[^\s<>\"'`]+")
 
@@ -129,8 +137,13 @@ def main() -> None:
     }
     if not video_operations:
         fail("operation metadata is missing the public Video operation surface")
-    if VIDEO_PUBLISH_OPERATIONS - set(video_operations):
-        fail("operation metadata is missing videoApplyRevision")
+    for named, label in (
+        (VIDEO_PUBLISH_OPERATIONS, "videoApplyRevision"),
+        (VIDEO_QUOTE_OPERATIONS, "videoQuoteVideo"),
+        (VIDEO_GENERATE_WRITE_OPERATIONS, "videoCreateVideo/videoCancelVideo"),
+    ):
+        if named - set(video_operations):
+            fail(f"operation metadata is missing {label}")
 
     for operation_id, operation in video_operations.items():
         if operation["method"] == "GET":
@@ -138,7 +151,17 @@ def main() -> None:
                 fail(f"public Video read {operation_id} must require only video:read and carry no write safety")
             continue
 
-        if operation["write_safety"] != VIDEO_WRITE_SAFETY:
+        if operation_id in VIDEO_QUOTE_OPERATIONS:
+            if operation["abilities"] != ["video:generate"] or operation["write_safety"] != VIDEO_QUOTE_WRITE_SAFETY:
+                fail(f"{operation_id} must require video:generate with idempotency and concurrency both unsupported")
+            continue
+
+        if operation_id in VIDEO_GENERATE_WRITE_OPERATIONS:
+            if operation["abilities"] != ["video:generate"] or operation["write_safety"] != VIDEO_GENERATE_WRITE_SAFETY:
+                fail(f"{operation_id} must require video:generate with idempotency required and concurrency unsupported")
+            continue
+
+        if operation["write_safety"] != VIDEO_EDIT_WRITE_SAFETY:
             fail(f"public Video write {operation_id} must require both idempotency and concurrency")
 
         if operation_id in VIDEO_PUBLISH_OPERATIONS:
