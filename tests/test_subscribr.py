@@ -55,7 +55,23 @@ class CliContractTest(unittest.TestCase):
     VIDEO_PUBLISH_WRITE_ROUTES = {
         "video.apply-revision": ("videoApplyRevision", "/api/v1/video/projects/{project}/revision/apply"),
     }
-    VIDEO_ROUTES = {**VIDEO_READ_ROUTES, **VIDEO_EDIT_WRITE_ROUTES, **VIDEO_PUBLISH_WRITE_ROUTES}
+    # A quote spends nothing: video:generate, idempotency AND concurrency both unsupported.
+    VIDEO_QUOTE_ROUTES = {
+        "video.quote-video": ("videoQuoteVideo", "/api/v1/video/projects/quote"),
+    }
+    # Generation writes: video:generate, idempotency required, concurrency unsupported
+    # (there is no existing revision for a create or a cancel to conflict with).
+    VIDEO_GENERATE_WRITE_ROUTES = {
+        "video.create-video": ("videoCreateVideo", "/api/v1/video/projects"),
+        "video.cancel-video": ("videoCancelVideo", "/api/v1/video/projects/{project}/cancel"),
+    }
+    VIDEO_ROUTES = {
+        **VIDEO_READ_ROUTES,
+        **VIDEO_EDIT_WRITE_ROUTES,
+        **VIDEO_PUBLISH_WRITE_ROUTES,
+        **VIDEO_QUOTE_ROUTES,
+        **VIDEO_GENERATE_WRITE_ROUTES,
+    }
 
     def test_generated_metadata_covers_all_current_operations(self):
         operation_ids = {route["operation_id"] for route in subscribr.ROUTES.values()}
@@ -68,7 +84,7 @@ class CliContractTest(unittest.TestCase):
         self.assertIn("templates.create-template", subscribr.ROUTES)
         self.assertIn("voices.commit-voice-profile", subscribr.ROUTES)
 
-    def test_video_surface_contains_the_full_review_and_fix_operation_set(self):
+    def test_video_surface_contains_every_operation_shape(self):
         routes = {
             key: (route["operation_id"], route["path"])
             for key, route in subscribr.ROUTES.items()
@@ -99,6 +115,26 @@ class CliContractTest(unittest.TestCase):
             self.assertEqual(["video:publish"], route["abilities"], key)
             self.assertEqual(
                 {"idempotency": "required", "concurrency": "required", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_QUOTE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:generate"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "unsupported", "concurrency": "unsupported", "retry": "never"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_GENERATE_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:generate"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "unsupported", "retry": "same-key"},
                 route["write_safety"],
                 key,
             )
@@ -263,11 +299,14 @@ class CliContractTest(unittest.TestCase):
         for document in (readme, skill):
             self.assertIn("video:edit", document)
             self.assertIn("video:publish", document)
+            self.assertIn("video:generate", document)
             self.assertIn("--idempotency-key", document)
             self.assertIn("--if-match", document)
             self.assertIn("apply-revision", document)
             self.assertIn("immutable", document)
             self.assertIn("--output", document)
+            self.assertIn("required_credits", document)
+            self.assertIn("cancel-video", document)
 
         # apply-revision needs explicit user approval before it is called; it
         # publishes an unrecoverable change.
