@@ -53,6 +53,27 @@ ALIASES = {
     "scripts.agent-cancel": "scripts.cancel-script-agent-run",
 }
 
+# The 22 video.* operations added in 2.2.0 (Review & Fix reads and staging
+# writes, apply-revision, and quote/create/cancel generation). Their
+# server-side routes live on an unmerged, feature-flagged pull request in
+# Main, so a Subscribr instance that has not deployed it yet returns a bare
+# 404 with no typed error body for any of them. That is handled specially in
+# `request()` below. The original nine video reads (capability discovery,
+# Channels, and custom voice/avatar/media-asset reads) predate this release,
+# already exist on every deployed instance, and are deliberately excluded —
+# an ordinary 404 there still means "not found." Delete this set once the
+# facade has shipped and soaked; a 404 will no longer need explaining.
+VIDEO_OPERATIONS_PENDING_DEPLOY = {
+    "video.list-projects", "video.get-project", "video.get-project-download",
+    "video.get-editable-content", "video.get-revision-manifest",
+    "video.list-overlay-templates", "video.get-quality-report", "video.get-revision-pass",
+    "video.add-overlay", "video.remove-staged-overlay", "video.update-overlay",
+    "video.remove-overlay", "video.update-captions", "video.remove-music",
+    "video.edit-slide-text", "video.regenerate-visual", "video.show-presenter",
+    "video.discard-edit", "video.apply-revision", "video.quote-video",
+    "video.create-video", "video.cancel-video",
+}
+
 
 class CliError(Exception):
     def __init__(self, message: str, exit_code: int = 1, detail: Any = None):
@@ -125,6 +146,11 @@ def status_exit_code(status: int) -> int:
     return 1
 
 
+def has_typed_error_body(detail: Any) -> bool:
+    """Whether `detail` is a Subscribr JSON error envelope: `{"error": {"code": ...}}`."""
+    return isinstance(detail, dict) and isinstance(detail.get("error"), dict) and "code" in detail["error"]
+
+
 def retryable(method: str, headers: dict[str, str]) -> bool:
     return method in {"GET", "HEAD", "OPTIONS"} or "Idempotency-Key" in headers
 
@@ -166,6 +192,7 @@ def request(
     body: Any = None,
     extra_headers: dict[str, str] | None = None,
     max_attempts: int = 3,
+    operation: str | None = None,
 ) -> Any:
     headers = get_headers(extra_headers)
     data = json.dumps(body).encode("utf-8") if body is not None else (b"{}" if method in BODY_METHODS else None)
@@ -191,6 +218,24 @@ def request(
                 delay = retry_after if retry_after is not None else min(0.25 * (2 ** (attempt - 1)), 2.0)
                 time.sleep(delay)
                 continue
+            if error.code == 404 and operation in VIDEO_OPERATIONS_PENDING_DEPLOY and not has_typed_error_body(detail):
+                # A deployed instance always wraps a Video error in a typed
+                # body, including a genuine not-found — see
+                # video_capability_unavailable/video_provisioning_required in
+                # README.md. A 404 with no such body means the router itself
+                # never matched this route, which for one of these 22
+                # operations most likely means the facade is not deployed or
+                # not enabled for this Team yet, not that the id was wrong.
+                raise CliError(
+                    f"HTTP 404, with no typed Subscribr error body, for `{operation}`. This operation is "
+                    "new in 2.2.0; its server-side route may not be deployed yet, or the capability may not "
+                    "be enabled for this Team. That is not necessarily a mistake in the request. Once "
+                    "deployed, a disabled capability instead returns a typed `video_capability_unavailable` "
+                    "error, and a genuine not-found returns a typed error too — this response carried "
+                    "neither.",
+                    EXIT_VALIDATION,
+                    detail,
+                ) from error
             raise CliError(f"HTTP {error.code}", status_exit_code(error.code), detail) from error
         except urllib.error.URLError as error:
             reason = str(error.reason)
@@ -708,7 +753,7 @@ def run(args: list[str]) -> int:
         return 0
     # Resolve before inspecting flags so an unknown command fails as a usage
     # error rather than reaching the network.
-    _, route = resolve_route(domain, args[1])
+    key, route = resolve_route(domain, args[1])
     if any(argument in ("help", "--help", "-h") for argument in args[2:]):
         print_action_help(domain, args[1])
         return 0
@@ -719,7 +764,7 @@ def run(args: list[str]) -> int:
             EXIT_USAGE,
         )
     method, path, body, headers = build_request(route, parse_extra_args(command_args))
-    result = request(method, path, body, headers)
+    result = request(method, path, body, headers, operation=key)
 
     if output is not None:
         download_url = find_download_url(result)

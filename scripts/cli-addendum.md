@@ -76,6 +76,13 @@ Asynchronous operations return an operation ID. Poll it with
 
 ### Subscribr Video commands
 
+Every command below depends on Subscribr Video being deployed and enabled
+for the calling Team, so do not assume it works before trying it: a
+disabled capability returns a typed `video_capability_unavailable` error,
+while a `404` with no typed error body on a newer operation (Review & Fix,
+`apply-revision`, or `quote-video`/`create-video`/`cancel-video`) means that
+operation is not deployed yet — neither is a mistake in the request.
+
 Reads need `video:read`. Staging and discard writes need `video:edit`.
 Publishing a revision needs `video:publish`. Generating a video needs
 `video:generate` — a separate ability from `video:edit`/`video:publish`, so a

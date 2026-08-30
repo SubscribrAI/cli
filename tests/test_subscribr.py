@@ -145,6 +145,28 @@ class CliContractTest(unittest.TestCase):
                 key,
             )
 
+    def test_pending_deploy_video_operations_are_exactly_the_2_2_0_additions(self):
+        """Scoped to the 22 operations this release adds — the original nine
+        video reads, and every non-video command, must never be reclassified."""
+        new_reads = {
+            "video.list-projects", "video.get-project", "video.get-project-download",
+            "video.get-editable-content", "video.get-revision-manifest",
+            "video.list-overlay-templates", "video.get-quality-report", "video.get-revision-pass",
+        }
+        expected = (
+            new_reads
+            | set(self.VIDEO_EDIT_WRITE_ROUTES)
+            | set(self.VIDEO_PUBLISH_WRITE_ROUTES)
+            | set(self.VIDEO_QUOTE_ROUTES)
+            | set(self.VIDEO_GENERATE_WRITE_ROUTES)
+        )
+        self.assertEqual(22, len(expected))
+        self.assertEqual(expected, subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
+        original_nine = set(self.VIDEO_READ_ROUTES) - new_reads
+        self.assertEqual(9, len(original_nine))
+        self.assertEqual(set(), original_nine & subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
+        self.assertTrue(subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY.issubset(set(subscribr.ROUTES)))
+
     def test_aliases_resolve_to_generated_routes(self):
         key, route = subscribr.resolve_route("scripts", "agent-cancel")
         self.assertEqual("scripts.cancel-script-agent-run", key)
@@ -700,6 +722,75 @@ class RequestTest(unittest.TestCase):
                 subscribr.request("PATCH", "/api/v1/projects/project%3Av1%3Aidea%3A1", {}, max_attempts=1)
         self.assertEqual(subscribr.EXIT_CONFLICT, raised.exception.exit_code)
         self.assertEqual("revision_conflict", raised.exception.detail["error"]["code"])
+
+    def test_bare_404_on_a_pending_deploy_video_operation_explains_itself(self):
+        """A route the facade hasn't deployed yet 404s with no typed body —
+        that must read as "not deployed," not "bad request"."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1,
+                    operation="video.get-project",
+                )
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertIn("may not be deployed yet", str(raised.exception))
+        self.assertIn("video_capability_unavailable", str(raised.exception))
+        self.assertIn("video.get-project", str(raised.exception))
+
+    def test_typed_404_on_a_pending_deploy_video_operation_is_not_reclassified(self):
+        """A deployed instance's genuine not-found is already typed — that
+        must pass through unchanged, never relabeled as 'not deployed.'"""
+        error = urllib.error.HTTPError(
+            "https://example.test", 404, "Not Found", {}, io.BytesIO(b'{"error":{"code":"not_found"}}')
+        )
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1,
+                    operation="video.get-project",
+                )
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertEqual("HTTP 404", str(raised.exception))
+        self.assertEqual("not_found", raised.exception.detail["error"]["code"])
+
+    def test_bare_404_on_a_long_standing_video_read_is_not_reclassified(self):
+        """The original nine video reads predate 2.2.0 and are already live
+        on every deployed instance; a bare 404 there still just means
+        not-found."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/avatars/x", None, {}, max_attempts=1,
+                    operation="video.get-avatar",
+                )
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_bare_404_on_a_non_video_operation_is_not_reclassified(self):
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/team", None, {}, max_attempts=1,
+                    operation="team.get-team",
+                )
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_bare_404_without_an_operation_argument_is_not_reclassified(self):
+        """`operation` is optional; callers that don't pass it (or a caller
+        outside `run()`) get the original, unadorned message."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request("GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1)
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_run_passes_the_resolved_operation_key_to_request(self):
+        with patch.object(subscribr, "request", return_value={"data": {}}) as mock_request, \
+                redirect_stdout(io.StringIO()):
+            subscribr.run(["video", "get-project", "--project", "proj_1"])
+        self.assertEqual("video.get-project", mock_request.call_args.kwargs.get("operation"))
 
 
 class DownloadOutputTest(unittest.TestCase):

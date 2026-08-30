@@ -3,7 +3,7 @@
   "manifest_version": "1.0.0",
   "source_sha256": "60b0221fdf43a95030a74d0fcc540be5e87dc32b4e085ea3a33d3ce2d07f2ebf",
   "artifacts": {
-    "skills/subscribr-api/SKILL.md": "c5fa4054e5824682bf1c51129e1757d8ba776d9e6684a913ae1a30162d0f627b",
+    "skills/subscribr-api/SKILL.md": "16ed52b4e45b701b720fe9a38153e7cb84bab198152db9498b12e167d094f09d",
     "skills/subscribr-api/references/endpoints.md": "783a403ee16e423a54a1badb4ccc4295faa4743412f5623b5ff920a62fb25403",
     "skills/subscribr-api/references/operations.json": "de05fd99fb2fcdc1716d07c75dec4c6ca4144afb0c74035eca860b1a3d34af01"
   }
