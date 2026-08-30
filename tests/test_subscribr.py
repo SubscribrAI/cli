@@ -1,7 +1,13 @@
+import copy
+import hashlib
 import importlib.util
 import io
 import json
 import os
+import shutil
+import socket
+import subprocess
+import sys
 import tempfile
 import unittest
 import urllib.error
@@ -17,7 +23,8 @@ SPEC.loader.exec_module(subscribr)
 
 
 class CliContractTest(unittest.TestCase):
-    VIDEO_ROUTES = {
+    # The original nine: capability discovery, Channels, and custom assets.
+    VIDEO_READ_ROUTES = {
         "video.list-capabilities": ("videoListCapabilities", "/api/v1/video/capabilities"),
         "video.list-channels": ("videoListChannels", "/api/v1/video/channels"),
         "video.get-channel": ("videoGetChannel", "/api/v1/video/channels/{videoChannel}"),
@@ -27,6 +34,49 @@ class CliContractTest(unittest.TestCase):
         "video.get-avatar": ("videoGetAvatar", "/api/v1/video/avatars/{avatar}"),
         "video.list-media-assets": ("videoListMediaAssets", "/api/v1/video/media-assets"),
         "video.get-media-asset": ("videoGetMediaAsset", "/api/v1/video/media-assets/{mediaAsset}"),
+        # Review & Fix reads added alongside the staging writes below.
+        "video.list-projects": ("videoListProjects", "/api/v1/video/projects"),
+        "video.get-project": ("videoGetProject", "/api/v1/video/projects/{project}"),
+        "video.get-project-download": ("videoGetProjectDownload", "/api/v1/video/projects/{project}/download"),
+        "video.get-editable-content": ("videoGetEditableContent", "/api/v1/video/projects/{project}/editable-content"),
+        "video.get-revision-manifest": ("videoGetRevisionManifest", "/api/v1/video/projects/{project}/revision-manifest"),
+        "video.list-overlay-templates": ("videoListOverlayTemplates", "/api/v1/video/projects/{project}/overlay-templates"),
+        "video.get-quality-report": ("videoGetQualityReport", "/api/v1/video/projects/{project}/quality-report"),
+        "video.get-revision-pass": ("videoGetRevisionPass", "/api/v1/video/projects/{project}/revision/passes/{pass}"),
+    }
+    # Review & Fix staging/discard writes: video:edit, idempotency+concurrency required.
+    VIDEO_EDIT_WRITE_ROUTES = {
+        "video.add-overlay": ("videoAddOverlay", "/api/v1/video/projects/{project}/revision/overlays"),
+        "video.remove-staged-overlay": ("videoRemoveStagedOverlay", "/api/v1/video/projects/{project}/revision/overlays/{item}"),
+        "video.update-overlay": ("videoUpdateOverlay", "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}"),
+        "video.remove-overlay": ("videoRemoveOverlay", "/api/v1/video/projects/{project}/revision/published-overlays/{overlay}"),
+        "video.update-captions": ("videoUpdateCaptions", "/api/v1/video/projects/{project}/revision/captions"),
+        "video.remove-music": ("videoRemoveMusic", "/api/v1/video/projects/{project}/revision/music"),
+        "video.edit-slide-text": ("videoEditSlideText", "/api/v1/video/projects/{project}/revision/slide-text"),
+        "video.regenerate-visual": ("videoRegenerateVisual", "/api/v1/video/projects/{project}/revision/regenerate-visual"),
+        "video.show-presenter": ("videoShowPresenter", "/api/v1/video/projects/{project}/revision/presenter"),
+        "video.discard-edit": ("videoDiscardEdit", "/api/v1/video/projects/{project}/revision/items/{item}"),
+    }
+    # Publishing a revision: video:publish, its own ability, same write safety.
+    VIDEO_PUBLISH_WRITE_ROUTES = {
+        "video.apply-revision": ("videoApplyRevision", "/api/v1/video/projects/{project}/revision/apply"),
+    }
+    # A quote spends nothing: video:generate, idempotency AND concurrency both unsupported.
+    VIDEO_QUOTE_ROUTES = {
+        "video.quote-video": ("videoQuoteVideo", "/api/v1/video/projects/quote"),
+    }
+    # Generation writes: video:generate, idempotency required, concurrency unsupported
+    # (there is no existing revision for a create or a cancel to conflict with).
+    VIDEO_GENERATE_WRITE_ROUTES = {
+        "video.create-video": ("videoCreateVideo", "/api/v1/video/projects"),
+        "video.cancel-video": ("videoCancelVideo", "/api/v1/video/projects/{project}/cancel"),
+    }
+    VIDEO_ROUTES = {
+        **VIDEO_READ_ROUTES,
+        **VIDEO_EDIT_WRITE_ROUTES,
+        **VIDEO_PUBLISH_WRITE_ROUTES,
+        **VIDEO_QUOTE_ROUTES,
+        **VIDEO_GENERATE_WRITE_ROUTES,
     }
 
     def test_generated_metadata_covers_all_current_operations(self):
@@ -40,7 +90,7 @@ class CliContractTest(unittest.TestCase):
         self.assertIn("templates.create-template", subscribr.ROUTES)
         self.assertIn("voices.commit-voice-profile", subscribr.ROUTES)
 
-    def test_video_surface_contains_exactly_the_nine_canonical_reads(self):
+    def test_video_surface_contains_every_operation_shape(self):
         routes = {
             key: (route["operation_id"], route["path"])
             for key, route in subscribr.ROUTES.items()
@@ -48,10 +98,74 @@ class CliContractTest(unittest.TestCase):
         }
 
         self.assertEqual(self.VIDEO_ROUTES, routes)
-        for key in self.VIDEO_ROUTES:
-            self.assertEqual("GET", subscribr.ROUTES[key]["method"])
-            self.assertEqual(["video:read"], subscribr.ROUTES[key]["abilities"])
-            self.assertIsNone(subscribr.ROUTES[key]["write_safety"])
+
+        for key in self.VIDEO_READ_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertEqual("GET", route["method"], key)
+            self.assertEqual(["video:read"], route["abilities"], key)
+            self.assertIsNone(route["write_safety"], key)
+
+        for key in self.VIDEO_EDIT_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:edit"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "required", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_PUBLISH_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:publish"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "required", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_QUOTE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:generate"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "unsupported", "concurrency": "unsupported", "retry": "never"},
+                route["write_safety"],
+                key,
+            )
+
+        for key in self.VIDEO_GENERATE_WRITE_ROUTES:
+            route = subscribr.ROUTES[key]
+            self.assertNotEqual("GET", route["method"], key)
+            self.assertEqual(["video:generate"], route["abilities"], key)
+            self.assertEqual(
+                {"idempotency": "required", "concurrency": "unsupported", "retry": "same-key"},
+                route["write_safety"],
+                key,
+            )
+
+    def test_pending_deploy_video_operations_are_exactly_the_2_2_0_additions(self):
+        """Scoped to the 22 operations this release adds — the original nine
+        video reads, and every non-video command, must never be reclassified."""
+        new_reads = {
+            "video.list-projects", "video.get-project", "video.get-project-download",
+            "video.get-editable-content", "video.get-revision-manifest",
+            "video.list-overlay-templates", "video.get-quality-report", "video.get-revision-pass",
+        }
+        expected = (
+            new_reads
+            | set(self.VIDEO_EDIT_WRITE_ROUTES)
+            | set(self.VIDEO_PUBLISH_WRITE_ROUTES)
+            | set(self.VIDEO_QUOTE_ROUTES)
+            | set(self.VIDEO_GENERATE_WRITE_ROUTES)
+        )
+        self.assertEqual(22, len(expected))
+        self.assertEqual(expected, subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
+        original_nine = set(self.VIDEO_READ_ROUTES) - new_reads
+        self.assertEqual(9, len(original_nine))
+        self.assertEqual(set(), original_nine & subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
+        self.assertTrue(subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY.issubset(set(subscribr.ROUTES)))
 
     def test_aliases_resolve_to_generated_routes(self):
         key, route = subscribr.resolve_route("scripts", "agent-cancel")
@@ -198,18 +312,34 @@ class CliContractTest(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         skill = (ROOT / "skills/subscribr-api/SKILL.md").read_text()
 
+        # The addendum's command table is the exhaustive command reference;
+        # every generated video command must be documented there.
         for command in self.VIDEO_ROUTES:
             action = command.split(".", 1)[1]
-            self.assertIn(f"video {action}", readme)
             self.assertIn(f"video {action}", skill)
+
         for document in (readme, skill):
             self.assertIn("video_capability_unavailable", document)
             self.assertIn("video_provisioning_required", document)
             self.assertIn("Team-bound", document)
             self.assertIn("owner/admin-only", document)
-            self.assertIn("quote", document)
-            self.assertIn("revision", document)
-        self.assertIn("Subscribr Video capability, Channel, and custom-asset reads", skill)
+
+        for document in (readme, skill):
+            self.assertIn("video:edit", document)
+            self.assertIn("video:publish", document)
+            self.assertIn("video:generate", document)
+            self.assertIn("--idempotency-key", document)
+            self.assertIn("--if-match", document)
+            self.assertIn("apply-revision", document)
+            self.assertIn("immutable", document)
+            self.assertIn("--output", document)
+            self.assertIn("required_credits", document)
+            self.assertIn("cancel-video", document)
+
+        # apply-revision needs explicit user approval before it is called; it
+        # publishes an unrecoverable change.
+        self.assertIn("confirm", skill.lower())
+        self.assertIn("download", skill.lower())
 
 
 
@@ -389,6 +519,127 @@ class PackagingTest(unittest.TestCase):
         for entry in marketplace["plugins"]:
             self.assertEqual(subscribr.VERSION, entry["version"])
 
+
+class VerifyPackageVideoGuardTest(unittest.TestCase):
+    """`scripts/verify_package.py` must fail closed on a Video operation it
+    has never reviewed, even when that operation reuses an existing write
+    shape (idempotency/concurrency/abilities) byte-for-byte. Both cases here
+    were confirmed passing verification before the fix."""
+
+    def _temp_copy(self) -> Path:
+        temp_root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, temp_root, ignore_errors=True)
+        destination = temp_root / "repo"
+        shutil.copytree(ROOT, destination, ignore=shutil.ignore_patterns(".git", "__pycache__", "node_modules"))
+        return destination
+
+    @staticmethod
+    def _mutate_operations(repo: Path, mutate) -> None:
+        """Applies `mutate` to a parsed copy of operations.json, then refreshes
+        its provenance digest so the mutation is judged on its own merits,
+        not rejected earlier by the unrelated artifact-digest check."""
+        operations_path = repo / "skills/subscribr-api/references/operations.json"
+        provenance_path = repo / "skills/subscribr-api/references/provenance.json"
+        operations = json.loads(operations_path.read_text())
+        mutate(operations)
+        operations_path.write_text(json.dumps(operations, indent=2) + "\n")
+        provenance = json.loads(provenance_path.read_text())
+        provenance["artifacts"]["skills/subscribr-api/references/operations.json"] = hashlib.sha256(
+            operations_path.read_bytes()
+        ).hexdigest()
+        provenance_path.write_text(json.dumps(provenance, indent=2) + "\n")
+
+    @staticmethod
+    def _run_verify_package(repo: Path) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(repo / "scripts/verify_package.py")],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_the_real_package_still_passes(self):
+        result = self._run_verify_package(ROOT)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("package verification passed", result.stdout)
+
+    def test_a_new_irreversible_operation_cannot_pass_by_sharing_the_edit_shape(self):
+        """CONFIRMED repro: a synthetic videoDeleteProjectPermanently, with the
+        exact idempotency+concurrency shape of an ordinary edit write and
+        abilities == ["video:edit"], used to validate silently because only
+        the nine/five known ids were checked by shape. It must now fail
+        before shape is even considered, because the id is unreviewed."""
+
+        def add_delete_operation(operations: dict) -> None:
+            edit_write = copy.deepcopy(operations["operations"]["video.remove-music"])
+            edit_write["operation_id"] = "videoDeleteProjectPermanently"
+            operations["operations"]["video.delete-project-permanently"] = edit_write
+            operations["required_operation_ids"].append("videoDeleteProjectPermanently")
+
+        repo = self._temp_copy()
+        self._mutate_operations(repo, add_delete_operation)
+
+        result = self._run_verify_package(repo)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("package verification failed", result.stderr)
+        self.assertIn("videoDeleteProjectPermanently", result.stderr)
+        self.assertIn("unreviewed", result.stderr)
+
+    def test_an_unnamed_operation_cannot_pass_by_sharing_a_read_shape(self):
+        """CONFIRMED repro: cloning video.get-avatar into a new video.rogue-read
+        key, with a fresh operation_id and refreshed provenance, used to
+        validate silently and print "108 operations" because only the HTTP
+        method decided the read branch. It must now fail because the id was
+        never named as reviewed."""
+
+        def add_rogue_read(operations: dict) -> None:
+            read = copy.deepcopy(operations["operations"]["video.get-avatar"])
+            read["operation_id"] = "videoRogueRead"
+            operations["operations"]["video.rogue-read"] = read
+            operations["required_operation_ids"].append("videoRogueRead")
+
+        repo = self._temp_copy()
+        self._mutate_operations(repo, add_rogue_read)
+
+        result = self._run_verify_package(repo)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("package verification failed", result.stderr)
+        self.assertIn("videoRogueRead", result.stderr)
+        self.assertIn("unreviewed", result.stderr)
+
+    def test_an_irreversible_looking_id_is_rejected_even_once_named_as_an_edit_write(self):
+        """Defense in depth: even if a human miscategorizes a dangerous-looking
+        id straight into VIDEO_EDIT_WRITE_OPERATIONS (so the inventory check
+        above no longer catches it), the keyword gate must still refuse to
+        let it validate as an ordinary edit."""
+
+        def add_delete_operation(operations: dict) -> None:
+            edit_write = copy.deepcopy(operations["operations"]["video.remove-music"])
+            edit_write["operation_id"] = "videoDeleteProjectPermanently"
+            operations["operations"]["video.delete-project-permanently"] = edit_write
+            operations["required_operation_ids"].append("videoDeleteProjectPermanently")
+
+        repo = self._temp_copy()
+        self._mutate_operations(repo, add_delete_operation)
+        verify_package_path = repo / "scripts/verify_package.py"
+        source = verify_package_path.read_text()
+        marked_source = source.replace(
+            '"videoDiscardEdit",\n}',
+            '"videoDiscardEdit", "videoDeleteProjectPermanently",\n}',
+            1,
+        )
+        self.assertNotEqual(source, marked_source, "VIDEO_EDIT_WRITE_OPERATIONS literal moved; update this test")
+        verify_package_path.write_text(marked_source)
+
+        result = self._run_verify_package(repo)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("package verification failed", result.stderr)
+        self.assertIn("videoDeleteProjectPermanently", result.stderr)
+        self.assertIn("irreversible or privileged", result.stderr)
+
+
 class RequestTest(unittest.TestCase):
     def setUp(self):
         self.environment = patch.dict(os.environ, {
@@ -471,6 +722,256 @@ class RequestTest(unittest.TestCase):
                 subscribr.request("PATCH", "/api/v1/projects/project%3Av1%3Aidea%3A1", {}, max_attempts=1)
         self.assertEqual(subscribr.EXIT_CONFLICT, raised.exception.exit_code)
         self.assertEqual("revision_conflict", raised.exception.detail["error"]["code"])
+
+    def test_bare_404_on_a_pending_deploy_video_operation_explains_itself(self):
+        """A route the facade hasn't deployed yet 404s with no typed body —
+        that must read as "not deployed," not "bad request"."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1,
+                    operation="video.get-project",
+                )
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertIn("may not be deployed yet", str(raised.exception))
+        self.assertIn("video_capability_unavailable", str(raised.exception))
+        self.assertIn("video.get-project", str(raised.exception))
+
+    def test_typed_404_on_a_pending_deploy_video_operation_is_not_reclassified(self):
+        """A deployed instance's genuine not-found is already typed — that
+        must pass through unchanged, never relabeled as 'not deployed.'"""
+        error = urllib.error.HTTPError(
+            "https://example.test", 404, "Not Found", {}, io.BytesIO(b'{"error":{"code":"not_found"}}')
+        )
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1,
+                    operation="video.get-project",
+                )
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertEqual("HTTP 404", str(raised.exception))
+        self.assertEqual("not_found", raised.exception.detail["error"]["code"])
+
+    def test_bare_404_on_a_long_standing_video_read_is_not_reclassified(self):
+        """The original nine video reads predate 2.2.0 and are already live
+        on every deployed instance; a bare 404 there still just means
+        not-found."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/video/avatars/x", None, {}, max_attempts=1,
+                    operation="video.get-avatar",
+                )
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_bare_404_on_a_non_video_operation_is_not_reclassified(self):
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request(
+                    "GET", "/api/v1/team", None, {}, max_attempts=1,
+                    operation="team.get-team",
+                )
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_bare_404_without_an_operation_argument_is_not_reclassified(self):
+        """`operation` is optional; callers that don't pass it (or a caller
+        outside `run()`) get the original, unadorned message."""
+        error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.request("GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1)
+        self.assertEqual("HTTP 404", str(raised.exception))
+
+    def test_run_passes_the_resolved_operation_key_to_request(self):
+        with patch.object(subscribr, "request", return_value={"data": {}}) as mock_request, \
+                redirect_stdout(io.StringIO()):
+            subscribr.run(["video", "get-project", "--project", "proj_1"])
+        self.assertEqual("video.get-project", mock_request.call_args.kwargs.get("operation"))
+
+
+class DownloadOutputTest(unittest.TestCase):
+    """`--output` streams a response's `download_url` to disk instead of
+    printing it, and never sends our bearer token to that third-party host."""
+
+    def setUp(self):
+        self.environment = patch.dict(os.environ, {
+            "SUBSCRIBR_API_TOKEN": "secret",
+            "SUBSCRIBR_API_BASE_URL": "https://example.test",
+        }, clear=True)
+        self.environment.start()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        # `cdn.example` is a reserved, non-resolving RFC 2606 test domain, so
+        # every test below stands in a real (public) DNS answer for it. Tests
+        # that exercise `ensure_public_download_host` itself override this.
+        self.dns = patch("socket.getaddrinfo", return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 0)),
+        ])
+        self.dns.start()
+
+    def tearDown(self):
+        self.environment.stop()
+        self.dns.stop()
+        self.temp_dir.cleanup()
+
+    def test_find_download_url_reads_the_top_level_or_the_data_envelope(self):
+        self.assertEqual("https://cdn.example/x.mp4", subscribr.find_download_url({"download_url": "https://cdn.example/x.mp4"}))
+        self.assertEqual(
+            "https://cdn.example/y.mp4",
+            subscribr.find_download_url({"data": {"download_url": "https://cdn.example/y.mp4"}}),
+        )
+        self.assertIsNone(subscribr.find_download_url({"data": {"id": "proj_1"}}))
+        self.assertIsNone(subscribr.find_download_url(["not", "a", "dict"]))
+        self.assertIsNone(subscribr.find_download_url(None))
+
+    def test_download_to_file_streams_to_a_temp_file_and_renames_on_success(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.side_effect = [b"chunk-one", b"chunk-two", b""]
+        destination = Path(self.temp_dir.name) / "nested" / "final.mp4"
+
+        with patch("urllib.request.urlopen", return_value=response) as opener:
+            written = subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+
+        self.assertEqual(len(b"chunk-onechunk-two"), written)
+        self.assertEqual(b"chunk-onechunk-two", destination.read_bytes())
+        # No leftover partial file next to the finished download.
+        self.assertEqual([destination.name], [entry.name for entry in destination.parent.iterdir()])
+
+        sent_request = opener.call_args[0][0]
+        self.assertNotIn("Authorization", sent_request.headers)
+        self.assertNotIn("authorization", {key.lower() for key in sent_request.headers})
+
+    def test_download_to_file_rejects_a_non_http_url_without_a_request(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        with patch("urllib.request.urlopen", side_effect=AssertionError("must not be called")):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("ftp://cdn.example/final.mp4", destination)
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+
+    def test_download_to_file_maps_http_errors_and_cleans_up_the_temp_file(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        error = urllib.error.HTTPError("https://cdn.example/final.mp4", 403, "Forbidden", {}, io.BytesIO(b""))
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+        self.assertEqual(subscribr.EXIT_AUTH, raised.exception.exit_code)
+        self.assertEqual([], list(destination.parent.iterdir()))
+        # The signed URL itself must never appear in an error message.
+        self.assertNotIn("sig=abc", str(raised.exception))
+
+    def test_download_to_file_treats_url_errors_as_transient(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("connection reset")):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+        self.assertEqual(subscribr.EXIT_TRANSIENT, raised.exception.exit_code)
+
+    def test_is_public_download_address_classifies_private_loopback_link_local_and_public(self):
+        self.assertTrue(subscribr.is_public_download_address("93.184.216.34"))
+        self.assertTrue(subscribr.is_public_download_address("2606:2800:220:1:248:1893:25c8:1946"))
+        self.assertFalse(subscribr.is_public_download_address("10.0.0.5"))
+        self.assertFalse(subscribr.is_public_download_address("172.16.0.5"))
+        self.assertFalse(subscribr.is_public_download_address("192.168.1.5"))
+        self.assertFalse(subscribr.is_public_download_address("127.0.0.1"))
+        self.assertFalse(subscribr.is_public_download_address("::1"))
+        # The cloud metadata endpoint. 169.254.0.0/16 is link-local.
+        self.assertFalse(subscribr.is_public_download_address("169.254.169.254"))
+        self.assertFalse(subscribr.is_public_download_address("0.0.0.0"))
+
+    def test_download_to_file_rejects_a_download_url_resolving_to_a_private_address(self):
+        """A tampered/compromised backend response pointing download_url at an
+        internal address (or the cloud metadata endpoint) must never reach
+        urlopen — this is checked before any request is made."""
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        self.dns.stop()
+        with patch("socket.getaddrinfo", return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("169.254.169.254", 0)),
+        ]):
+            with patch("urllib.request.urlopen", side_effect=AssertionError("must not be called")):
+                with self.assertRaises(subscribr.CliError) as raised:
+                    subscribr.download_to_file("https://internal.example/latest/meta-data/", destination)
+        self.dns.start()
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertIn("not a public address", str(raised.exception))
+
+    def test_download_to_file_reports_dns_failure_as_transient(self):
+        destination = Path(self.temp_dir.name) / "final.mp4"
+        self.dns.stop()
+        with patch("socket.getaddrinfo", side_effect=socket.gaierror("Name or service not known")):
+            with patch("urllib.request.urlopen", side_effect=AssertionError("must not be called")):
+                with self.assertRaises(subscribr.CliError) as raised:
+                    subscribr.download_to_file("https://cdn.example/final.mp4?sig=abc", destination)
+        self.dns.start()
+        self.assertEqual(subscribr.EXIT_TRANSIENT, raised.exception.exit_code)
+
+    def test_public_host_redirect_handler_blocks_a_redirect_to_a_private_address(self):
+        handler = subscribr.PublicHostRedirectHandler()
+        request = urllib.request.Request("https://cdn.example/final.mp4")
+        with patch("socket.getaddrinfo", return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("10.0.0.5", 0)),
+        ]):
+            with self.assertRaises(subscribr.CliError) as raised:
+                handler.redirect_request(request, None, 302, "Found", {}, "https://internal.example/secret")
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+        self.assertIn("not a public address", str(raised.exception))
+
+    def test_public_host_redirect_handler_blocks_a_scheme_downgrade(self):
+        handler = subscribr.PublicHostRedirectHandler()
+        request = urllib.request.Request("https://cdn.example/final.mp4")
+        with self.assertRaises(subscribr.CliError) as raised:
+            handler.redirect_request(request, None, 302, "Found", {}, "ftp://cdn.example/final.mp4")
+        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
+
+    def test_public_host_redirect_handler_allows_a_redirect_to_another_public_host(self):
+        handler = subscribr.PublicHostRedirectHandler()
+        request = urllib.request.Request("https://cdn.example/final.mp4", headers={"User-Agent": "x"})
+        redirected = handler.redirect_request(request, None, 302, "Found", {}, "https://other-cdn.example/final.mp4")
+        self.assertEqual("https://other-cdn.example/final.mp4", redirected.full_url)
+
+    def test_run_with_output_downloads_and_never_prints_the_signed_url(self):
+        # `--output` is generic transport behavior, not Video-specific, so this
+        # exercises it against `team get-team` rather than a Video route.
+        payload = {"data": {"download_url": "https://cdn.example/final.mp4?sig=super-secret", "expires_at": "2026-08-27T13:00:00Z"}}
+        destination = Path(self.temp_dir.name) / "final.mp4"
+
+        stdout = io.StringIO()
+        with patch.object(subscribr, "request", return_value=payload), \
+                patch.object(subscribr, "download_to_file", return_value=1234) as downloader, \
+                redirect_stdout(stdout):
+            self.assertEqual(0, subscribr.run([
+                "team", "get-team",
+                "--output", str(destination),
+            ]))
+
+        downloader.assert_called_once_with("https://cdn.example/final.mp4?sig=super-secret", destination)
+        output = stdout.getvalue()
+        self.assertNotIn("sig=super-secret", output)
+        self.assertNotIn("secret", output)  # the bearer token must not leak either
+        result = json.loads(output)
+        self.assertEqual({"downloaded": True, "path": str(destination), "bytes": 1234, "url_expires_at": "2026-08-27T13:00:00Z"}, result)
+
+    def test_run_with_output_fails_closed_when_the_response_has_no_download_url(self):
+        with patch.object(subscribr, "request", return_value={"data": {"id": "team_1"}}):
+            with self.assertRaises(subscribr.CliError) as raised:
+                subscribr.run([
+                    "team", "get-team",
+                    "--output", str(Path(self.temp_dir.name) / "final.mp4"),
+                ])
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
+
+    def test_split_transport_options_extracts_output_alongside_wait(self):
+        remaining, wait, output = subscribr.split_transport_options(["--project", "p1", "--output", "./out.mp4", "--wait"])
+        self.assertEqual(["--project", "p1"], remaining)
+        self.assertTrue(wait)
+        self.assertEqual("./out.mp4", output)
+
+    def test_output_without_a_path_is_a_usage_error(self):
+        with self.assertRaises(subscribr.CliError) as raised:
+            subscribr.split_transport_options(["--output"])
+        self.assertEqual(subscribr.EXIT_USAGE, raised.exception.exit_code)
 
 
 if __name__ == "__main__":

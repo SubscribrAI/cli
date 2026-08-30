@@ -128,6 +128,28 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `GET` | `/api/v1/video/avatars/{avatar}` | `videoGetAvatar` | `video:read` | read |
 | `GET` | `/api/v1/video/media-assets` | `videoListMediaAssets` | `video:read` | read |
 | `GET` | `/api/v1/video/media-assets/{mediaAsset}` | `videoGetMediaAsset` | `video:read` | read |
+| `GET` | `/api/v1/video/projects` | `videoListProjects` | `video:read` | read |
+| `POST` | `/api/v1/video/projects` | `videoCreateVideo` | `video:generate` | idempotency=required; concurrency=unsupported |
+| `GET` | `/api/v1/video/projects/{project}` | `videoGetProject` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/download` | `videoGetProjectDownload` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/editable-content` | `videoGetEditableContent` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/revision-manifest` | `videoGetRevisionManifest` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/overlay-templates` | `videoListOverlayTemplates` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/quality-report` | `videoGetQualityReport` | `video:read` | read |
+| `GET` | `/api/v1/video/projects/{project}/revision/passes/{pass}` | `videoGetRevisionPass` | `video:read` | read |
+| `POST` | `/api/v1/video/projects/{project}/revision/overlays` | `videoAddOverlay` | `video:edit` | idempotency=required; concurrency=required |
+| `DELETE` | `/api/v1/video/projects/{project}/revision/overlays/{item}` | `videoRemoveStagedOverlay` | `video:edit` | idempotency=required; concurrency=required |
+| `PATCH` | `/api/v1/video/projects/{project}/revision/published-overlays/{overlay}` | `videoUpdateOverlay` | `video:edit` | idempotency=required; concurrency=required |
+| `DELETE` | `/api/v1/video/projects/{project}/revision/published-overlays/{overlay}` | `videoRemoveOverlay` | `video:edit` | idempotency=required; concurrency=required |
+| `PUT` | `/api/v1/video/projects/{project}/revision/captions` | `videoUpdateCaptions` | `video:edit` | idempotency=required; concurrency=required |
+| `PUT` | `/api/v1/video/projects/{project}/revision/music` | `videoRemoveMusic` | `video:edit` | idempotency=required; concurrency=required |
+| `PATCH` | `/api/v1/video/projects/{project}/revision/slide-text` | `videoEditSlideText` | `video:edit` | idempotency=required; concurrency=required |
+| `PUT` | `/api/v1/video/projects/{project}/revision/regenerate-visual` | `videoRegenerateVisual` | `video:edit` | idempotency=required; concurrency=required |
+| `PUT` | `/api/v1/video/projects/{project}/revision/presenter` | `videoShowPresenter` | `video:edit` | idempotency=required; concurrency=required |
+| `DELETE` | `/api/v1/video/projects/{project}/revision/items/{item}` | `videoDiscardEdit` | `video:edit` | idempotency=required; concurrency=required |
+| `POST` | `/api/v1/video/projects/{project}/revision/apply` | `videoApplyRevision` | `video:publish` | idempotency=required; concurrency=required |
+| `POST` | `/api/v1/video/projects/quote` | `videoQuoteVideo` | `video:generate` | idempotency=unsupported; concurrency=unsupported |
+| `POST` | `/api/v1/video/projects/{project}/cancel` | `videoCancelVideo` | `video:generate` | idempotency=required; concurrency=unsupported |
 
 ## Voices
 

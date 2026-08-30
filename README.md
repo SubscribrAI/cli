@@ -25,7 +25,8 @@ A human can do all of this from the website. An AI agent can do the same work th
 - **Generate and track thumbnails.** Start a thumbnail generation run for an idea, check its progress, and see how much of your Team's monthly thumbnail allowance is left.
 - **Keep every script on-brand.** Validate and commit a Voice Profile once, so every script that follows matches your Channel's tone.
 - **Hand it to an AI agent.** Install this as a skill for Claude Code, or another AI coding agent, so the agent can do all of the above for you, using your own Team's permissions.
-- **Check in on Subscribr Video.** Today, read-only: your Channels, custom voices, custom avatars, and reference media.
+- **Review and fix a rendered video.** Read the editable content and revision manifest, stage overlay, caption, music, slide, and visual edits, then publish a new revision with `apply-revision`.
+- **Generate a new video.** Get a credit quote up front, submit with an idempotency key so a retried submit never double-bills, and cancel any time before it finishes for a full refund.
 
 ## Install
 
@@ -90,7 +91,14 @@ subscribr thumbnails create-thumbnail-generation --channel 42 \
 subscribr thumbnails get-thumbnail-generation --channel 42 --run-id 128
 subscribr thumbnails get-thumbnail-usage
 
-# Read-only access to Subscribr Video
+# Subscribr Video: quote, create, and cancel a generation
+subscribr video quote-video --name "Explainer" --script @script.txt
+subscribr video create-video --name "Explainer" --script @script.txt \
+  --idempotency-key create-1
+subscribr video cancel-video --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --idempotency-key cancel-1
+
+# Subscribr Video: reads, staging writes, and publish
 subscribr video list-capabilities
 subscribr video list-channels
 subscribr video get-channel --video-channel stch_01hz3k9pb1z7c5m2r6n0y4x2a2
@@ -100,6 +108,15 @@ subscribr video list-avatars --page 1 --per-page 20
 subscribr video get-avatar --avatar 820e8400-e29b-41d4-a716-446655440002
 subscribr video list-media-assets --page 1 --per-page 20
 subscribr video get-media-asset --media-asset 820e8400-e29b-41d4-a716-446655440006
+subscribr video get-editable-content --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2
+subscribr video add-overlay --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --template lower_third --inputs '{"text":"New product launch"}' \
+  --playhead-time 42 --idempotency-key overlay-1 --if-match '"revision-r4"'
+subscribr video apply-revision --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --idempotency-key apply-1 --if-match '"revision-r5"'
+subscribr operations get-operation --operation 9f8b6b0e-6b8e-4b8e-8b8e-6b8e4b8e8b8e
+subscribr video get-project-download --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --output ./final.mp4
 ```
 
 Don't know what a command needs? Ask the CLI itself — none of these touch the network:
@@ -112,11 +129,17 @@ subscribr <domain> <action> --help      # every field, its type, and an example
 
 ## Subscribr Video: what's available today
 
-The `video` domain currently supports nine read-only operations: capability discovery, Channel list/detail, custom voice list/detail, custom avatar list/detail, and reference media list/detail. All of them require the `video:read` permission on your Team-bound API token.
+The `video` domain exposes capability discovery; Channel, custom voice, custom avatar, and reference media reads; Project reads (project, download, editable content, revision manifest, overlay templates, quality report, revision pass); the Review & Fix revision-staging writes (add/update/remove overlay, remove a staged overlay, update captions, remove music, edit slide text, regenerate a visual, show the presenter, discard a staged edit) plus `apply-revision`, which publishes a new immutable video revision; and `quote-video`/`create-video`/`cancel-video`, for generating a new video.
 
-This is an opt-in feature. If your Team does not have access, you get a `video_capability_unavailable` error; if your Team has not connected Subscribr Video, you get `video_provisioning_required`. Neither of these means something went wrong on the network — do not retry them as if they did. Asset reads are owner/admin-only until Channel-scoped authorization ships.
+Reads require `video:read`. Staging and discard writes require `video:edit`. `apply-revision` requires `video:publish`. Generating a video requires `video:generate`, a separate ability — a token can be scoped to edit and publish without ever being able to spend credits, or the reverse.
 
-This CLI does not yet ship quote, project, render, cancellation, artifact, or revision operations for Subscribr Video. Don't assume they exist just because the product supports them.
+Every staging write and `apply-revision` require `--idempotency-key` and `--if-match` with the current strong ETag — read the ETag from `video get-editable-content` or `video get-revision-manifest` before staging a change. `create-video` and `cancel-video` require `--idempotency-key` only; `quote-video` requires neither.
+
+`quote-video` returns `required_credits` and spends nothing — quote and charge always agree. `create-video` bills on submit; a replayed submit with the same idempotency key converges on the same video instead of billing twice, and it returns `202` with an operation to poll with `operations get-operation`, the same as `apply-revision`. `cancel-video` works at any point before the video finishes, is a harmless no-op once it has, and refunds the full charge.
+
+This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. The Review & Fix, `apply-revision`, and `quote-video`/`create-video`/`cancel-video` operations are newer still: on an instance that has not deployed them yet, they 404 with no typed body at all — the CLI says so plainly instead of reporting a generic validation failure, and that message is not a mistake in the request either. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
+
+`video apply-revision` publishes a new, immutable video revision — there is no undo. Confirm the staged changes with the user before calling it, then poll the returned operation with `operations get-operation`. Download and inspect the finished video with `video get-project-download --output <path>` before telling the user the edit is done; a successful publish is not proof the video is correct. A `409 revision_conflict` on any video write carries `error.current_revision`; retry the identical write with that value as `--if-match` instead of re-fetching the manifest.
 
 For YouTube research, separate from Subscribr Video, use the Intel video operations instead.
 

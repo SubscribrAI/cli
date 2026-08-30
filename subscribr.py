@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import re
@@ -18,7 +19,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.1.1"
+VERSION = "2.2.0"
 METADATA_PATH = Path(__file__).resolve().parent / "skills" / "subscribr-api" / "references" / "operations.json"
 BODY_METHODS = {"POST", "PUT", "PATCH"}
 EXIT_AUTH = 2
@@ -50,6 +51,27 @@ ALIASES = {
     "scripts.agent-generate": "scripts.start-script-agent-run",
     "scripts.agent-poll": "scripts.get-script-agent-run",
     "scripts.agent-cancel": "scripts.cancel-script-agent-run",
+}
+
+# The 22 video.* operations added in 2.2.0 (Review & Fix reads and staging
+# writes, apply-revision, and quote/create/cancel generation). Their
+# server-side routes live on an unmerged, feature-flagged pull request in
+# Main, so a Subscribr instance that has not deployed it yet returns a bare
+# 404 with no typed error body for any of them. That is handled specially in
+# `request()` below. The original nine video reads (capability discovery,
+# Channels, and custom voice/avatar/media-asset reads) predate this release,
+# already exist on every deployed instance, and are deliberately excluded —
+# an ordinary 404 there still means "not found." Delete this set once the
+# facade has shipped and soaked; a 404 will no longer need explaining.
+VIDEO_OPERATIONS_PENDING_DEPLOY = {
+    "video.list-projects", "video.get-project", "video.get-project-download",
+    "video.get-editable-content", "video.get-revision-manifest",
+    "video.list-overlay-templates", "video.get-quality-report", "video.get-revision-pass",
+    "video.add-overlay", "video.remove-staged-overlay", "video.update-overlay",
+    "video.remove-overlay", "video.update-captions", "video.remove-music",
+    "video.edit-slide-text", "video.regenerate-visual", "video.show-presenter",
+    "video.discard-edit", "video.apply-revision", "video.quote-video",
+    "video.create-video", "video.cancel-video",
 }
 
 
@@ -124,6 +146,11 @@ def status_exit_code(status: int) -> int:
     return 1
 
 
+def has_typed_error_body(detail: Any) -> bool:
+    """Whether `detail` is a Subscribr JSON error envelope: `{"error": {"code": ...}}`."""
+    return isinstance(detail, dict) and isinstance(detail.get("error"), dict) and "code" in detail["error"]
+
+
 def retryable(method: str, headers: dict[str, str]) -> bool:
     return method in {"GET", "HEAD", "OPTIONS"} or "Idempotency-Key" in headers
 
@@ -165,6 +192,7 @@ def request(
     body: Any = None,
     extra_headers: dict[str, str] | None = None,
     max_attempts: int = 3,
+    operation: str | None = None,
 ) -> Any:
     headers = get_headers(extra_headers)
     data = json.dumps(body).encode("utf-8") if body is not None else (b"{}" if method in BODY_METHODS else None)
@@ -190,6 +218,24 @@ def request(
                 delay = retry_after if retry_after is not None else min(0.25 * (2 ** (attempt - 1)), 2.0)
                 time.sleep(delay)
                 continue
+            if error.code == 404 and operation in VIDEO_OPERATIONS_PENDING_DEPLOY and not has_typed_error_body(detail):
+                # A deployed instance always wraps a Video error in a typed
+                # body, including a genuine not-found — see
+                # video_capability_unavailable/video_provisioning_required in
+                # README.md. A 404 with no such body means the router itself
+                # never matched this route, which for one of these 22
+                # operations most likely means the facade is not deployed or
+                # not enabled for this Team yet, not that the id was wrong.
+                raise CliError(
+                    f"HTTP 404, with no typed Subscribr error body, for `{operation}`. This operation is "
+                    "new in 2.2.0; its server-side route may not be deployed yet, or the capability may not "
+                    "be enabled for this Team. That is not necessarily a mistake in the request. Once "
+                    "deployed, a disabled capability instead returns a typed `video_capability_unavailable` "
+                    "error, and a genuine not-found returns a typed error too — this response carried "
+                    "neither.",
+                    EXIT_VALIDATION,
+                    detail,
+                ) from error
             raise CliError(f"HTTP {error.code}", status_exit_code(error.code), detail) from error
         except urllib.error.URLError as error:
             reason = str(error.reason)
@@ -317,15 +363,189 @@ def build_request(route: dict[str, Any], arguments: dict[str, Any]) -> tuple[str
     return method, path, body, headers
 
 
-def split_transport_options(args: list[str]) -> tuple[list[str], bool]:
+def split_transport_options(args: list[str]) -> tuple[list[str], bool, str | None]:
     wait = False
+    output: str | None = None
     remaining: list[str] = []
-    for argument in args:
+    index = 0
+    while index < len(args):
+        argument = args[index]
         if argument == "--wait":
             wait = True
+            index += 1
+            continue
+        if argument == "--output":
+            if index + 1 >= len(args):
+                raise CliError("--output requires a file path.", EXIT_USAGE)
+            output = args[index + 1]
+            index += 2
             continue
         remaining.append(argument)
-    return remaining, wait
+        index += 1
+    return remaining, wait, output
+
+
+def find_download_url(payload: Any) -> str | None:
+    """A response's `download_url`, at the top level or nested under `data`."""
+    if not isinstance(payload, dict):
+        return None
+    direct = payload.get("download_url")
+    if isinstance(direct, str) and direct:
+        return direct
+    nested = payload.get("data")
+    if isinstance(nested, dict):
+        value = nested.get("download_url")
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def is_public_download_address(address: str) -> bool:
+    """
+    True for an address a `download_url` may legitimately resolve to.
+
+    False for private (RFC 1918/4193), loopback, link-local (this is what
+    covers a cloud metadata endpoint — 169.254.169.254 and its IPv6
+    equivalent are both link-local), multicast, reserved, or unspecified
+    addresses.
+    """
+    parsed = ipaddress.ip_address(address)
+    return not (
+        parsed.is_private
+        or parsed.is_loopback
+        or parsed.is_link_local
+        or parsed.is_multicast
+        or parsed.is_reserved
+        or parsed.is_unspecified
+    )
+
+
+def ensure_public_download_host(url: str) -> None:
+    """
+    Refuses to let a download proceed anywhere that isn't a public host.
+
+    A `download_url` is supposed to name a public storage/CDN object; this
+    is what stops a compromised or tampered API response from pointing the
+    operator's machine at an internal service or the cloud metadata
+    endpoint instead.
+
+    This resolves and classifies the address rather than checking the
+    hostname against an allowlist. Signed URLs legitimately come from more
+    than one storage host — the account's storage provider can rotate, use
+    a regional bucket, or sit behind a CDN domain — and that set is not
+    ours to enumerate here; a strict allowlist would eventually reject a
+    legitimate signed URL. Classifying the resolved address is proportionate
+    to the actual threat, which is a tampered *destination*, not an
+    untrusted *provider*.
+
+    This does not defend against DNS rebinding between this check and the
+    connection urllib opens moments later — closing that would mean pinning
+    the resolved address for the request itself, which is more than this
+    hardening pass is proportionate to against a threat that already
+    requires a compromised or tampered backend response.
+    """
+    hostname = urllib.parse.urlparse(url).hostname
+    if not hostname:
+        raise CliError("The response's download_url has no host.", EXIT_VALIDATION)
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as error:
+        raise CliError(f"Cannot resolve the download host: {error}", EXIT_TRANSIENT) from error
+    for *_rest, sockaddr in resolved:
+        address = sockaddr[0]
+        if not is_public_download_address(address):
+            raise CliError(
+                f"Refusing to download from {hostname}: it resolves to {address}, which is not "
+                "a public address.",
+                EXIT_VALIDATION,
+            )
+
+
+class PublicHostRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """
+    Re-validates scheme and destination on every redirect hop.
+
+    Without this, a first request to an approved public host could still be
+    redirected by a 30x response to an internal address or downgraded to a
+    non-http(s) scheme, and urllib's default redirect handling would follow
+    it without another look.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlparse(newurl).scheme not in ("http", "https"):
+            raise CliError("A download redirect pointed at a non-http(s) URL.", EXIT_VALIDATION)
+        ensure_public_download_host(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def download_to_file(url: str, destination: Path) -> int:
+    """
+    Streams a pre-signed `download_url` to `destination`.
+
+    The URL points at a third-party host (CDN/object storage), not the
+    Subscribr API, so this request never carries the `Authorization` header —
+    sending our bearer token to that host would leak the credential to a
+    party we do not control. The response is written to a sibling temp file
+    and renamed into place only once the full transfer succeeds, so a failed
+    or interrupted download never leaves a partial file at the requested path.
+
+    The destination host — and, on redirect, every host the response sends
+    it to next — must resolve to a public address: see
+    `ensure_public_download_host` for why this is a resolved-address check
+    rather than a host allowlist.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise CliError("The response's download_url is not an http(s) URL.", EXIT_VALIDATION)
+    ensure_public_download_host(url)
+
+    destination = destination.expanduser()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = destination.with_name(f".{destination.name}.part-{os.getpid()}-{os.urandom(4).hex()}")
+
+    request_headers = {"User-Agent": f"subscribr-cli/{VERSION}"}
+    download_request = urllib.request.Request(url, headers=request_headers, method="GET")
+    context = ssl_context()
+    # Installed (rather than passed as urlopen's own `context=`) so our
+    # redirect handler — which must re-validate every hop's destination —
+    # participates too; urlopen's own `context=` argument builds a fresh,
+    # bare-default opener that would silently drop it.
+    urllib.request.install_opener(
+        urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), PublicHostRedirectHandler())
+    )
+    total_bytes = 0
+    try:
+        with urllib.request.urlopen(download_request, timeout=120) as response:
+            with temp_path.open("wb") as handle:
+                while True:
+                    chunk = response.read(1024 * 256)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    total_bytes += len(chunk)
+    except urllib.error.HTTPError as error:
+        temp_path.unlink(missing_ok=True)
+        # Never echo the URL: a signed URL's own error response can carry
+        # signing material in redirected/echoed query strings.
+        raise CliError(
+            f"Download failed: HTTP {error.code}. The signed URL may have expired; re-fetch it and retry.",
+            status_exit_code(error.code),
+        ) from error
+    except urllib.error.URLError as error:
+        temp_path.unlink(missing_ok=True)
+        reason = str(error.reason)
+        if permanent_network_failure(error.reason):
+            raise CliError(f"Cannot reach the download host: {reason}", EXIT_TRANSIENT) from error
+        raise CliError(f"Download temporarily failed: {reason}", EXIT_TRANSIENT) from error
+    except OSError as error:
+        temp_path.unlink(missing_ok=True)
+        raise CliError(f"Unable to write {destination}: {error}", EXIT_USAGE) from error
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+    temp_path.replace(destination)
+    return total_bytes
 
 
 def print_domains() -> None:
@@ -533,18 +753,37 @@ def run(args: list[str]) -> int:
         return 0
     # Resolve before inspecting flags so an unknown command fails as a usage
     # error rather than reaching the network.
-    _, route = resolve_route(domain, args[1])
+    key, route = resolve_route(domain, args[1])
     if any(argument in ("help", "--help", "-h") for argument in args[2:]):
         print_action_help(domain, args[1])
         return 0
-    command_args, wait = split_transport_options(args[2:])
+    command_args, wait, output = split_transport_options(args[2:])
     if wait:
         raise CliError(
             "Automatic waiting is unavailable. Poll with `operations get-operation --operation <uuid>` instead.",
             EXIT_USAGE,
         )
     method, path, body, headers = build_request(route, parse_extra_args(command_args))
-    print(json.dumps(request(method, path, body, headers), indent=2, ensure_ascii=False))
+    result = request(method, path, body, headers, operation=key)
+
+    if output is not None:
+        download_url = find_download_url(result)
+        if download_url is None:
+            raise CliError(
+                "--output requires a response with a download_url; this operation's response did not include one.",
+                EXIT_USAGE,
+            )
+        destination = Path(output)
+        written_bytes = download_to_file(download_url, destination)
+        summary: dict[str, Any] = {"downloaded": True, "path": str(destination), "bytes": written_bytes}
+        data = result.get("data") if isinstance(result.get("data"), dict) else result
+        expires_at = data.get("expires_at") if isinstance(data, dict) else None
+        if isinstance(expires_at, str):
+            summary["url_expires_at"] = expires_at
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        return 0
+
+    print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 

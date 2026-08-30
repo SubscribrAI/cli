@@ -76,17 +76,92 @@ Asynchronous operations return an operation ID. Poll it with
 
 ### Subscribr Video commands
 
-| CLI command | Operation |
-|---|---|
-| `video list-capabilities` | `videoListCapabilities` |
-| `video list-channels` | `videoListChannels` |
-| `video get-channel --video-channel <id>` | `videoGetChannel` |
-| `video list-voices --page <n> --per-page <1-100>` | `videoListVoices` |
-| `video get-voice --voice <uuid>` | `videoGetVoice` |
-| `video list-avatars --page <n> --per-page <1-100>` | `videoListAvatars` |
-| `video get-avatar --avatar <uuid>` | `videoGetAvatar` |
-| `video list-media-assets --page <n> --per-page <1-100>` | `videoListMediaAssets` |
-| `video get-media-asset --media-asset <uuid>` | `videoGetMediaAsset` |
+Every command below depends on Subscribr Video being deployed and enabled
+for the calling Team, so do not assume it works before trying it: a
+disabled capability returns a typed `video_capability_unavailable` error,
+while a `404` with no typed error body on a newer operation (Review & Fix,
+`apply-revision`, or `quote-video`/`create-video`/`cancel-video`) means that
+operation is not deployed yet — neither is a mistake in the request.
 
-Start with `video list-capabilities`. The generic operation poller never creates
-or exposes a Video write.
+Reads need `video:read`. Staging and discard writes need `video:edit`.
+Publishing a revision needs `video:publish`. Generating a video needs
+`video:generate` — a separate ability from `video:edit`/`video:publish`, so a
+token can be scoped to stage and publish edits without ever being able to
+spend credits, or the other way around.
+
+Every staging write and `apply-revision` require `--idempotency-key` and
+`--if-match` with the current strong `ETag`. `create-video` and
+`cancel-video` require `--idempotency-key` only — there is no existing
+revision for either to hold `--if-match` against. `quote-video` requires
+neither: it has no state to key and nothing to retry into.
+
+| CLI command | Operation | Notes |
+|---|---|---|
+| `video quote-video --name <n> --script <s> ...` | `videoQuoteVideo` | returns `required_credits` and spends nothing; quote and charge always agree |
+| `video create-video --name <n> --script <s> ... --idempotency-key <key>` | `videoCreateVideo` | a replayed submit with the same key converges on the same video instead of billing twice; returns `202` with an operation |
+| `video cancel-video --project <id> --idempotency-key <key>` | `videoCancelVideo` | works at any point before the video finishes, is a harmless no-op once it has, and refunds the full charge |
+| `video list-capabilities` | `videoListCapabilities` | start here |
+| `video list-channels` | `videoListChannels` | |
+| `video get-channel --video-channel <id>` | `videoGetChannel` | |
+| `video list-voices --page <n> --per-page <1-100>` | `videoListVoices` | |
+| `video get-voice --voice <uuid>` | `videoGetVoice` | |
+| `video list-avatars --page <n> --per-page <1-100>` | `videoListAvatars` | |
+| `video get-avatar --avatar <uuid>` | `videoGetAvatar` | |
+| `video list-media-assets --page <n> --per-page <1-100>` | `videoListMediaAssets` | |
+| `video get-media-asset --media-asset <uuid>` | `videoGetMediaAsset` | |
+| `video list-projects` | `videoListProjects` | the Project board for Subscribr Video |
+| `video get-project --project <id>` | `videoGetProject` | |
+| `video get-project-download --project <id>` | `videoGetProjectDownload` | returns a signed `download_url`; pass `--output <path>` to save the file directly instead of printing the URL |
+| `video get-editable-content --project <id>` | `videoGetEditableContent` | read this first; capture its `ETag` before staging any edit |
+| `video get-revision-manifest --project <id>` | `videoGetRevisionManifest` | every staged, unpublished change, and its current `ETag` |
+| `video list-overlay-templates --project <id>` | `videoListOverlayTemplates` | |
+| `video get-quality-report --project <id>` | `videoGetQualityReport` | |
+| `video get-revision-pass --project <id> --pass <id>` | `videoGetRevisionPass` | |
+| `video add-overlay --project <id> ...` | `videoAddOverlay` | stage a new overlay |
+| `video remove-staged-overlay --project <id> --item <id>` | `videoRemoveStagedOverlay` | discard a staged, not-yet-published overlay |
+| `video update-overlay --project <id> --overlay <id> ...` | `videoUpdateOverlay` | stage a change to an already-published overlay |
+| `video remove-overlay --project <id> --overlay <id>` | `videoRemoveOverlay` | stage removal of an already-published overlay |
+| `video update-captions --project <id> ...` | `videoUpdateCaptions` | |
+| `video remove-music --project <id> ...` | `videoRemoveMusic` | |
+| `video edit-slide-text --project <id> ...` | `videoEditSlideText` | |
+| `video regenerate-visual --project <id> ...` | `videoRegenerateVisual` | |
+| `video show-presenter --project <id> ...` | `videoShowPresenter` | |
+| `video discard-edit --project <id> --item <id>` | `videoDiscardEdit` | discard any staged edit by its item id |
+| `video apply-revision --project <id> ...` | `videoApplyRevision` | publishes a new, immutable video revision; confirm with the user first |
+
+`video apply-revision` and `video create-video` both return `202` with an
+operation. Poll either with `operations get-operation --operation <uuid>`,
+the same generic poller used everywhere else in this CLI.
+
+### The Review & Fix loop
+
+Follow this order for every agent-driven video edit:
+
+1. `video get-editable-content --project <id>` — read the current content and
+   note the response `ETag`.
+2. Stage each change (`add-overlay`, `update-captions`, `edit-slide-text`,
+   `regenerate-visual`, `show-presenter`, `remove-music`, ...) with
+   `--if-match <the ETag you just read>` and a fresh `--idempotency-key` on
+   every call. Re-read the `ETag` after each accepted write; it advances on
+   every staged change.
+3. Review the staged result with `video get-revision-manifest` and
+   `video get-revision-pass` before publishing anything. Use
+   `video discard-edit` or `video remove-staged-overlay` to drop a staged
+   change you no longer want.
+4. Call `video apply-revision` only after the user has explicitly approved
+   the staged changes. It publishes a new, immutable video revision — there
+   is no undo.
+5. Poll the returned operation with `operations get-operation --operation
+   <uuid>` until it reaches a terminal state.
+6. Download the finished video with `video get-project-download --project
+   <id> --output <path>` and inspect it.
+
+If a staging write or `video apply-revision` returns `409 revision_conflict`,
+do not re-fetch the manifest first. Retry the identical write immediately
+with the same `--idempotency-key` and `error.current_revision` from the
+response body as the new `--if-match`.
+
+A `202` accepted, a successful staging call, or a ready-looking preview is
+**not** proof the video is good. Only the downloaded final artifact is. Do
+not tell the user an edit is done until you have downloaded and inspected
+that file.
