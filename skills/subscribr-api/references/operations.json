@@ -1491,6 +1491,145 @@
         "retry": "same-key"
       }
     },
+    "thumbnails.add-thumbnail-board-images": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [
+          "source"
+        ],
+        "fields": {
+          "label": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "my_recent",
+              "my_top_viewed",
+              "my_top_outlier",
+              "urls"
+            ]
+          },
+          "urls": {
+            "type": "string[]"
+          },
+          "usage": {
+            "type": "string",
+            "enum": [
+              "creator_face",
+              "style",
+              "product",
+              "background",
+              "screenshot",
+              null
+            ]
+          }
+        },
+        "body_required": true,
+        "example": {
+          "source": "urls",
+          "urls": [
+            "https://example.com/reference.png"
+          ],
+          "usage": "style",
+          "label": "Competitor picks"
+        }
+      },
+      "method": "POST",
+      "operation_id": "addThumbnailBoardImages",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/images",
+      "query_parameters": [],
+      "summary": "Add Thumbnail Board Images",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "thumbnails.assign-thumbnail-board-image-to-script": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [
+          "item_id",
+          "script_id"
+        ],
+        "fields": {
+          "item_id": {
+            "type": "integer"
+          },
+          "script_id": {
+            "type": "integer"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "item_id": 314,
+          "script_id": 88
+        }
+      },
+      "method": "POST",
+      "operation_id": "assignThumbnailBoardImageToScript",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/assign-to-script",
+      "query_parameters": [],
+      "summary": "Assign Thumbnail Board Image To Script",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "thumbnails.create-thumbnail-board-generation": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [
+          "prompt"
+        ],
+        "fields": {
+          "allow_text": {
+            "type": "boolean"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 2000
+          },
+          "reference_item_ids": {
+            "type": "integer[]"
+          },
+          "variations": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          }
+        },
+        "body_required": true,
+        "example": {
+          "prompt": "Shocked face pointing at a giant chart",
+          "reference_item_ids": [
+            311
+          ],
+          "variations": 2,
+          "allow_text": false
+        }
+      },
+      "method": "POST",
+      "operation_id": "createThumbnailBoardGeneration",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/generations",
+      "query_parameters": [],
+      "summary": "Create Thumbnail Board Generation",
+      "write_safety": {
+        "concurrency": "optional",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
     "thumbnails.create-thumbnail-generation": {
       "abilities": [
         "scripts:write",
@@ -1568,6 +1707,95 @@
         "retry": "never"
       }
     },
+    "thumbnails.edit-thumbnail-board-image": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [
+          "item_id",
+          "instruction"
+        ],
+        "fields": {
+          "instruction": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 2000,
+            "description": "One plain-language change, e.g. \"remove the text\" or \"make the sky stormy\"."
+          },
+          "item_id": {
+            "type": "integer",
+            "description": "A ready image item on this board to edit."
+          },
+          "region": {
+            "type": "object",
+            "description": "Optional rectangle, as fractions of the image (0-1), confining the edit. Pixels outside it are guaranteed identical to the original."
+          }
+        },
+        "body_required": true,
+        "example": {
+          "item_id": 312,
+          "instruction": "Remove the text",
+          "region": {
+            "x": 0.05,
+            "y": 0.55,
+            "width": 0.6,
+            "height": 0.35
+          }
+        }
+      },
+      "method": "POST",
+      "operation_id": "editThumbnailBoardImage",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/edits",
+      "query_parameters": [],
+      "summary": "Edit Thumbnail Board Image",
+      "write_safety": {
+        "concurrency": "optional",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
+    "thumbnails.export-thumbnail-board-image": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [
+          "item_id"
+        ],
+        "fields": {
+          "item_id": {
+            "type": "integer"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "item_id": 311
+        }
+      },
+      "method": "POST",
+      "operation_id": "exportThumbnailBoardImage",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/export",
+      "query_parameters": [],
+      "summary": "Export Thumbnail Board Image",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "unsupported",
+        "retry": "never"
+      }
+    },
+    "thumbnails.get-thumbnail-board": {
+      "abilities": [
+        "thumbnails:read"
+      ],
+      "body": null,
+      "method": "GET",
+      "operation_id": "getThumbnailBoard",
+      "path": "/api/v1/channels/{channel}/thumbnails/board",
+      "query_parameters": [],
+      "summary": "Get Thumbnail Board",
+      "write_safety": null
+    },
     "thumbnails.get-thumbnail-generation": {
       "abilities": [
         "scripts:read",
@@ -1609,6 +1837,92 @@
       ],
       "summary": "List Thumbnail Generations",
       "write_safety": null
+    },
+    "thumbnails.set-thumbnail-board-text": {
+      "abilities": [
+        "thumbnails:write"
+      ],
+      "body": {
+        "required": [],
+        "fields": {
+          "align": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ]
+          },
+          "background": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "fill": {
+            "type": "string"
+          },
+          "font": {
+            "type": "string",
+            "enum": [
+              "impact",
+              "anton",
+              "bebas",
+              "archivo",
+              "montserrat",
+              "oswald",
+              "bangers",
+              "luckiest",
+              "poppins",
+              "system"
+            ]
+          },
+          "item_id": {
+            "type": "integer",
+            "description": "Update this existing text overlay instead of creating one."
+          },
+          "over_item_id": {
+            "type": "integer",
+            "description": "Place the new overlay over this image item."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 16,
+            "maximum": 240
+          },
+          "stroke": {
+            "type": "string"
+          },
+          "stroke_width": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 40
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "content": "I WAS WRONG",
+          "over_item_id": 311,
+          "size": 64
+        }
+      },
+      "method": "POST",
+      "operation_id": "setThumbnailBoardText",
+      "path": "/api/v1/channels/{channel}/thumbnails/board/text",
+      "query_parameters": [],
+      "summary": "Set Thumbnail Board Text",
+      "write_safety": {
+        "concurrency": "unsupported",
+        "idempotency": "unsupported",
+        "retry": "never"
+      }
     },
     "video.add-overlay": {
       "abilities": [
@@ -2272,6 +2586,40 @@
         "retry": "same-key"
       }
     },
+    "video.replace-with-media": {
+      "abilities": [
+        "video:edit"
+      ],
+      "body": {
+        "required": [
+          "block_key",
+          "media_asset_id"
+        ],
+        "fields": {
+          "block_key": {
+            "type": "string"
+          },
+          "media_asset_id": {
+            "type": "string"
+          }
+        },
+        "body_required": true,
+        "example": {
+          "block_key": "slide_5",
+          "media_asset_id": "9c1b6a1a-8e2b-4b8a-9a1e-2f7a5c6d9e3b"
+        }
+      },
+      "method": "PUT",
+      "operation_id": "videoReplaceWithMedia",
+      "path": "/api/v1/video/projects/{project}/revision/replace-with-media",
+      "query_parameters": [],
+      "summary": "Replace a visual block with a media-library asset in a Subscribr Video revision",
+      "write_safety": {
+        "concurrency": "required",
+        "idempotency": "required",
+        "retry": "same-key"
+      }
+    },
     "video.show-presenter": {
       "abilities": [
         "video:edit"
@@ -2856,6 +3204,13 @@
     "updateTemplate",
     "archiveTemplate",
     "restoreTemplate",
+    "getThumbnailBoard",
+    "assignThumbnailBoardImageToScript",
+    "editThumbnailBoardImage",
+    "exportThumbnailBoardImage",
+    "createThumbnailBoardGeneration",
+    "addThumbnailBoardImages",
+    "setThumbnailBoardText",
     "listThumbnailGenerations",
     "createThumbnailGeneration",
     "getThumbnailGeneration",
@@ -2936,6 +3291,7 @@
     "videoRemoveOverlay",
     "videoUpdateOverlay",
     "videoRegenerateVisual",
+    "videoReplaceWithMedia",
     "videoEditSlideText",
     "videoListVoices",
     "videoGetVoice",
@@ -2946,6 +3302,6 @@
     "updateWebhook",
     "testWebhook"
   ],
-  "source_sha256": "60b0221fdf43a95030a74d0fcc540be5e87dc32b4e085ea3a33d3ce2d07f2ebf",
+  "source_sha256": "77bc890bb5e3f1b5a48b1ccf0ceb0cb6b6b54300b1fdbf3e84e6a1585bf191a5",
   "supported_contract_range": "^1.0.0"
 }

@@ -54,6 +54,7 @@ class CliContractTest(unittest.TestCase):
         "video.remove-music": ("videoRemoveMusic", "/api/v1/video/projects/{project}/revision/music"),
         "video.edit-slide-text": ("videoEditSlideText", "/api/v1/video/projects/{project}/revision/slide-text"),
         "video.regenerate-visual": ("videoRegenerateVisual", "/api/v1/video/projects/{project}/revision/regenerate-visual"),
+        "video.replace-with-media": ("videoReplaceWithMedia", "/api/v1/video/projects/{project}/revision/replace-with-media"),
         "video.show-presenter": ("videoShowPresenter", "/api/v1/video/projects/{project}/revision/presenter"),
         "video.discard-edit": ("videoDiscardEdit", "/api/v1/video/projects/{project}/revision/items/{item}"),
     }
@@ -145,27 +146,12 @@ class CliContractTest(unittest.TestCase):
                 key,
             )
 
-    def test_pending_deploy_video_operations_are_exactly_the_2_2_0_additions(self):
-        """Scoped to the 22 operations this release adds — the original nine
-        video reads, and every non-video command, must never be reclassified."""
-        new_reads = {
-            "video.list-projects", "video.get-project", "video.get-project-download",
-            "video.get-editable-content", "video.get-revision-manifest",
-            "video.list-overlay-templates", "video.get-quality-report", "video.get-revision-pass",
-        }
-        expected = (
-            new_reads
-            | set(self.VIDEO_EDIT_WRITE_ROUTES)
-            | set(self.VIDEO_PUBLISH_WRITE_ROUTES)
-            | set(self.VIDEO_QUOTE_ROUTES)
-            | set(self.VIDEO_GENERATE_WRITE_ROUTES)
-        )
-        self.assertEqual(22, len(expected))
-        self.assertEqual(expected, subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
-        original_nine = set(self.VIDEO_READ_ROUTES) - new_reads
-        self.assertEqual(9, len(original_nine))
-        self.assertEqual(set(), original_nine & subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY)
-        self.assertTrue(subscribr.VIDEO_OPERATIONS_PENDING_DEPLOY.issubset(set(subscribr.ROUTES)))
+    def test_no_pending_deploy_special_case_remains(self):
+        """2.2.0's `VIDEO_OPERATIONS_PENDING_DEPLOY` explained a bare 404 as
+        "may not be deployed yet" while the Video slice was still rolling
+        out. Main deployed all of it on 2026-08-31, so that special case is
+        gone — this pins it staying gone rather than quietly coming back."""
+        self.assertFalse(hasattr(subscribr, "VIDEO_OPERATIONS_PENDING_DEPLOY"))
 
     def test_aliases_resolve_to_generated_routes(self):
         key, route = subscribr.resolve_route("scripts", "agent-cancel")
@@ -723,9 +709,10 @@ class RequestTest(unittest.TestCase):
         self.assertEqual(subscribr.EXIT_CONFLICT, raised.exception.exit_code)
         self.assertEqual("revision_conflict", raised.exception.detail["error"]["code"])
 
-    def test_bare_404_on_a_pending_deploy_video_operation_explains_itself(self):
-        """A route the facade hasn't deployed yet 404s with no typed body —
-        that must read as "not deployed," not "bad request"."""
+    def test_bare_404_on_a_review_and_fix_operation_is_not_reclassified(self):
+        """The Review & Fix reads/writes shipped in 2.2.0 (and
+        videoReplaceWithMedia in 2.3.0) are fully deployed as of 2026-08-31;
+        a bare 404 there means plain not-found, same as any other operation."""
         error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
         with patch("urllib.request.urlopen", side_effect=error):
             with self.assertRaises(subscribr.CliError) as raised:
@@ -733,14 +720,11 @@ class RequestTest(unittest.TestCase):
                     "GET", "/api/v1/video/projects/proj_1", None, {}, max_attempts=1,
                     operation="video.get-project",
                 )
-        self.assertEqual(subscribr.EXIT_VALIDATION, raised.exception.exit_code)
-        self.assertIn("may not be deployed yet", str(raised.exception))
-        self.assertIn("video_capability_unavailable", str(raised.exception))
-        self.assertIn("video.get-project", str(raised.exception))
+        self.assertEqual("HTTP 404", str(raised.exception))
 
-    def test_typed_404_on_a_pending_deploy_video_operation_is_not_reclassified(self):
-        """A deployed instance's genuine not-found is already typed — that
-        must pass through unchanged, never relabeled as 'not deployed.'"""
+    def test_typed_404_on_a_video_operation_is_not_reclassified(self):
+        """A genuine not-found is already typed — it passes through
+        unchanged."""
         error = urllib.error.HTTPError(
             "https://example.test", 404, "Not Found", {}, io.BytesIO(b'{"error":{"code":"not_found"}}')
         )
@@ -755,9 +739,8 @@ class RequestTest(unittest.TestCase):
         self.assertEqual("not_found", raised.exception.detail["error"]["code"])
 
     def test_bare_404_on_a_long_standing_video_read_is_not_reclassified(self):
-        """The original nine video reads predate 2.2.0 and are already live
-        on every deployed instance; a bare 404 there still just means
-        not-found."""
+        """The original nine video reads predate 2.2.0 and have always been
+        live; a bare 404 there still just means not-found."""
         error = urllib.error.HTTPError("https://example.test", 404, "Not Found", {}, io.BytesIO(b"Not Found"))
         with patch("urllib.request.urlopen", side_effect=error):
             with self.assertRaises(subscribr.CliError) as raised:

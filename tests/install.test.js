@@ -107,7 +107,7 @@ test("installs a self-contained CLI bundle and only replaces it with force", (t)
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /scripts/);
   assert.match(help.stdout, /operations/);
-  assert.match(help.stdout, /video\s+\(31 actions\)/);
+  assert.match(help.stdout, /video\s+\(32 actions\)/);
 
   const operationHelp = runCli(destination, "operations", "help");
   assert.equal(operationHelp.status, 0, operationHelp.stderr);
