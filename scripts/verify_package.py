@@ -75,8 +75,8 @@ VIDEO_READ_OPERATIONS = {
 VIDEO_EDIT_WRITE_OPERATIONS = {
     "videoAddOverlay", "videoRemoveStagedOverlay", "videoUpdateOverlay",
     "videoRemoveOverlay", "videoUpdateCaptions", "videoRemoveMusic",
-    "videoEditSlideText", "videoRegenerateVisual", "videoShowPresenter",
-    "videoDiscardEdit",
+    "videoEditSlideText", "videoRegenerateVisual", "videoReplaceWithMedia",
+    "videoShowPresenter", "videoDiscardEdit",
 }
 VIDEO_PUBLISH_OPERATIONS = {"videoApplyRevision"}
 VIDEO_QUOTE_OPERATIONS = {"videoQuoteVideo"}

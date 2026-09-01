@@ -76,12 +76,13 @@ Asynchronous operations return an operation ID. Poll it with
 
 ### Subscribr Video commands
 
-Every command below depends on Subscribr Video being deployed and enabled
-for the calling Team, so do not assume it works before trying it: a
-disabled capability returns a typed `video_capability_unavailable` error,
-while a `404` with no typed error body on a newer operation (Review & Fix,
-`apply-revision`, or `quote-video`/`create-video`/`cancel-video`) means that
-operation is not deployed yet — neither is a mistake in the request.
+Every command below is live, but still depends on Subscribr Video being
+enabled for the calling Team, so do not assume it works before trying it: a
+disabled capability returns a typed `video_capability_unavailable` error, and
+a Team that has not connected Subscribr Video gets `video_provisioning_required`.
+A bare `404` with no typed error body means the resource itself was not
+found, the same as anywhere else in the API — it is not a sign the operation
+is missing.
 
 Reads need `video:read`. Staging and discard writes need `video:edit`.
 Publishing a revision needs `video:publish`. Generating a video needs
@@ -125,6 +126,7 @@ neither: it has no state to key and nothing to retry into.
 | `video remove-music --project <id> ...` | `videoRemoveMusic` | |
 | `video edit-slide-text --project <id> ...` | `videoEditSlideText` | |
 | `video regenerate-visual --project <id> ...` | `videoRegenerateVisual` | |
+| `video replace-with-media --project <id> --block-key <key> --media-asset-id <id> ...` | `videoReplaceWithMedia` | swaps a visual block for an image from the Team's media library; the image must be at least the video's canvas size or the request is rejected; replacing a real-photo block spends a credit, a slide/illustration/stock block is free |
 | `video show-presenter --project <id> ...` | `videoShowPresenter` | |
 | `video discard-edit --project <id> --item <id>` | `videoDiscardEdit` | discard any staged edit by its item id |
 | `video apply-revision --project <id> ...` | `videoApplyRevision` | publishes a new, immutable video revision; confirm with the user first |
@@ -137,20 +139,27 @@ the same generic poller used everywhere else in this CLI.
 
 Follow this order for every agent-driven video edit:
 
-1. `video get-editable-content --project <id>` — read the current content and
-   note the response `ETag`.
+1. `video get-editable-content --project <id>` — read the current content,
+   note the response `ETag`, and check `edit_availability`. A customer
+   normally gets one revision round: `can_start_new_pass` says whether a
+   fresh pass may begin (an already-active pass can still be resumed even
+   when this is false), and `edit_window_ends_at` is when that stops being
+   true.
 2. Stage each change (`add-overlay`, `update-captions`, `edit-slide-text`,
-   `regenerate-visual`, `show-presenter`, `remove-music`, ...) with
-   `--if-match <the ETag you just read>` and a fresh `--idempotency-key` on
-   every call. Re-read the `ETag` after each accepted write; it advances on
-   every staged change.
+   `regenerate-visual`, `replace-with-media`, `show-presenter`,
+   `remove-music`, ...) with `--if-match <the ETag you just read>` and a
+   fresh `--idempotency-key` on every call. Re-read the `ETag` after each
+   accepted write; it advances on every staged change.
 3. Review the staged result with `video get-revision-manifest` and
    `video get-revision-pass` before publishing anything. Use
    `video discard-edit` or `video remove-staged-overlay` to drop a staged
    change you no longer want.
-4. Call `video apply-revision` only after the user has explicitly approved
-   the staged changes. It publishes a new, immutable video revision — there
-   is no undo.
+4. Before publishing, re-check `edit_availability.can_apply` from a fresh
+   `video get-editable-content` call. Applying spends the customer's
+   revision round, so confirm it is still true, then call
+   `video apply-revision` only after the user has explicitly approved the
+   staged changes. It publishes a new, immutable video revision — there is
+   no undo.
 5. Poll the returned operation with `operations get-operation --operation
    <uuid>` until it reaches a terminal state.
 6. Download the finished video with `video get-project-download --project

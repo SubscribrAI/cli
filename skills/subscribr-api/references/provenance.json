@@ -1,10 +1,10 @@
 {
   "contract_version": "1.0.0",
   "manifest_version": "1.0.0",
-  "source_sha256": "60b0221fdf43a95030a74d0fcc540be5e87dc32b4e085ea3a33d3ce2d07f2ebf",
+  "source_sha256": "77bc890bb5e3f1b5a48b1ccf0ceb0cb6b6b54300b1fdbf3e84e6a1585bf191a5",
   "artifacts": {
-    "skills/subscribr-api/SKILL.md": "16ed52b4e45b701b720fe9a38153e7cb84bab198152db9498b12e167d094f09d",
-    "skills/subscribr-api/references/endpoints.md": "783a403ee16e423a54a1badb4ccc4295faa4743412f5623b5ff920a62fb25403",
-    "skills/subscribr-api/references/operations.json": "de05fd99fb2fcdc1716d07c75dec4c6ca4144afb0c74035eca860b1a3d34af01"
+    "skills/subscribr-api/SKILL.md": "e12c707c88dcf624c2c1fce034ebbe0ddea992bf449c578340031f5825171619",
+    "skills/subscribr-api/references/endpoints.md": "064ff97b752f0aced695e44606ab514d0202a41efcd105b9c1ed192a6d667c32",
+    "skills/subscribr-api/references/operations.json": "7ae859c5c8fd1e0bff0ba037e566cfacbbcd4894d9dd9883fb9d5387aee8b72c"
   }
 }

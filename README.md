@@ -112,6 +112,9 @@ subscribr video get-editable-content --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2
 subscribr video add-overlay --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
   --template lower_third --inputs '{"text":"New product launch"}' \
   --playhead-time 42 --idempotency-key overlay-1 --if-match '"revision-r4"'
+subscribr video replace-with-media --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
+  --block-key slide_5 --media-asset-id 820e8400-e29b-41d4-a716-446655440006 \
+  --idempotency-key replace-1 --if-match '"revision-r4"'
 subscribr video apply-revision --project proj_01hz3k9pb1z7c5m2r6n0y4x2a2 \
   --idempotency-key apply-1 --if-match '"revision-r5"'
 subscribr operations get-operation --operation 9f8b6b0e-6b8e-4b8e-8b8e-6b8e4b8e8b8e
@@ -129,15 +132,17 @@ subscribr <domain> <action> --help      # every field, its type, and an example
 
 ## Subscribr Video: what's available today
 
-The `video` domain exposes capability discovery; Channel, custom voice, custom avatar, and reference media reads; Project reads (project, download, editable content, revision manifest, overlay templates, quality report, revision pass); the Review & Fix revision-staging writes (add/update/remove overlay, remove a staged overlay, update captions, remove music, edit slide text, regenerate a visual, show the presenter, discard a staged edit) plus `apply-revision`, which publishes a new immutable video revision; and `quote-video`/`create-video`/`cancel-video`, for generating a new video.
+The `video` domain exposes capability discovery; Channel, custom voice, custom avatar, and reference media reads; Project reads (project, download, editable content, revision manifest, overlay templates, quality report, revision pass); the Review & Fix revision-staging writes (add/update/remove overlay, remove a staged overlay, update captions, remove music, edit slide text, regenerate a visual, replace a visual with a media-library asset, show the presenter, discard a staged edit) plus `apply-revision`, which publishes a new immutable video revision; and `quote-video`/`create-video`/`cancel-video`, for generating a new video.
 
 Reads require `video:read`. Staging and discard writes require `video:edit`. `apply-revision` requires `video:publish`. Generating a video requires `video:generate`, a separate ability — a token can be scoped to edit and publish without ever being able to spend credits, or the reverse.
 
 Every staging write and `apply-revision` require `--idempotency-key` and `--if-match` with the current strong ETag — read the ETag from `video get-editable-content` or `video get-revision-manifest` before staging a change. `create-video` and `cancel-video` require `--idempotency-key` only; `quote-video` requires neither.
 
+`video replace-with-media --project <id> --block-key <key> --media-asset-id <id> ...` swaps a visual block for an image already in the Team's media library, by that asset's id. The image must be at least the size of the video's canvas or the request is rejected. Replacing a real-photo block spends a credit; replacing a studio slide, illustration, or stock block is free.
+
 `quote-video` returns `required_credits` and spends nothing — quote and charge always agree. `create-video` bills on submit; a replayed submit with the same idempotency key converges on the same video instead of billing twice, and it returns `202` with an operation to poll with `operations get-operation`, the same as `apply-revision`. `cancel-video` works at any point before the video finishes, is a harmless no-op once it has, and refunds the full charge.
 
-This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. The Review & Fix, `apply-revision`, and `quote-video`/`create-video`/`cancel-video` operations are newer still: on an instance that has not deployed them yet, they 404 with no typed body at all — the CLI says so plainly instead of reporting a generic validation failure, and that message is not a mistake in the request either. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
+This slice is default-off. A Team without read access receives the typed `video_capability_unavailable` error; a Team that has not connected Subscribr Video receives `video_provisioning_required`. Do not retry either response as an unclassified network failure. Every operation in this section — capability discovery, asset reads, Review & Fix, `apply-revision`, and `quote-video`/`create-video`/`cancel-video` — is deployed and live, so a bare `404` with no typed body means the resource itself was not found, the same as anywhere else in the API. Asset reads are owner/admin-only until Channel-scoped asset authorization ships. Channel reads retain the server's Team and Channel visibility rules.
 
 `video apply-revision` publishes a new, immutable video revision — there is no undo. Confirm the staged changes with the user before calling it, then poll the returned operation with `operations get-operation`. Download and inspect the finished video with `video get-project-download --output <path>` before telling the user the edit is done; a successful publish is not proof the video is correct. A `409 revision_conflict` on any video write carries `error.current_revision`; retry the identical write with that value as `--if-match` instead of re-fetching the manifest.
 

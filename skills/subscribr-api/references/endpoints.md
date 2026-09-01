@@ -113,6 +113,13 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `GET` | `/api/v1/channels/{channel}/thumbnails/generations` | `listThumbnailGenerations` | `scripts:read`, `thumbnails:read` | read |
 | `POST` | `/api/v1/channels/{channel}/thumbnails/generations` | `createThumbnailGeneration` | `scripts:write`, `thumbnails:write` | idempotency=unsupported; concurrency=unsupported |
 | `GET` | `/api/v1/channels/{channel}/thumbnails/generations/{runId}` | `getThumbnailGeneration` | `scripts:read`, `thumbnails:read` | read |
+| `GET` | `/api/v1/channels/{channel}/thumbnails/board` | `getThumbnailBoard` | `thumbnails:read` | read |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/images` | `addThumbnailBoardImages` | `thumbnails:write` | idempotency=unsupported; concurrency=unsupported |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/generations` | `createThumbnailBoardGeneration` | `thumbnails:write` | idempotency=required; concurrency=optional |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/edits` | `editThumbnailBoardImage` | `thumbnails:write` | idempotency=required; concurrency=optional |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/text` | `setThumbnailBoardText` | `thumbnails:write` | idempotency=unsupported; concurrency=unsupported |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/export` | `exportThumbnailBoardImage` | `thumbnails:write` | idempotency=unsupported; concurrency=unsupported |
+| `POST` | `/api/v1/channels/{channel}/thumbnails/board/assign-to-script` | `assignThumbnailBoardImageToScript` | `thumbnails:write` | idempotency=unsupported; concurrency=unsupported |
 | `GET` | `/api/v1/team/thumbnails/usage` | `getThumbnailUsage` | `scripts:read`, `thumbnails:read` | read |
 
 ## Video
@@ -145,6 +152,7 @@ Subscribr Video public operations use `/api/v1/video/...` as capability slices s
 | `PUT` | `/api/v1/video/projects/{project}/revision/music` | `videoRemoveMusic` | `video:edit` | idempotency=required; concurrency=required |
 | `PATCH` | `/api/v1/video/projects/{project}/revision/slide-text` | `videoEditSlideText` | `video:edit` | idempotency=required; concurrency=required |
 | `PUT` | `/api/v1/video/projects/{project}/revision/regenerate-visual` | `videoRegenerateVisual` | `video:edit` | idempotency=required; concurrency=required |
+| `PUT` | `/api/v1/video/projects/{project}/revision/replace-with-media` | `videoReplaceWithMedia` | `video:edit` | idempotency=required; concurrency=required |
 | `PUT` | `/api/v1/video/projects/{project}/revision/presenter` | `videoShowPresenter` | `video:edit` | idempotency=required; concurrency=required |
 | `DELETE` | `/api/v1/video/projects/{project}/revision/items/{item}` | `videoDiscardEdit` | `video:edit` | idempotency=required; concurrency=required |
 | `POST` | `/api/v1/video/projects/{project}/revision/apply` | `videoApplyRevision` | `video:publish` | idempotency=required; concurrency=required |

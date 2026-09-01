@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-09-01
+
+Syncs the CLI against Subscribr's contract as deployed to production on 2026-08-31: the Video slice is now fully live, and the customer API grew past video for the first time.
+
+### Added
+
+- `video replace-with-media`, staging the replacement of a visual block with an image from the Team's own media library (`videoReplaceWithMedia`, `video:edit`, idempotency and concurrency both required, same as every other Review & Fix staging write). The image must be at least the video's canvas size or the request is rejected. Replacing a real-photo block spends a credit; replacing a studio slide, illustration, or stock block is free.
+- Seven `thumbnails board` commands the API contract now exposes: `thumbnails get-thumbnail-board`, `add-thumbnail-board-images`, `create-thumbnail-board-generation`, `edit-thumbnail-board-image`, `set-thumbnail-board-text`, `export-thumbnail-board-image`, and `assign-thumbnail-board-image-to-script`.
+- The Review & Fix loop in the CLI addendum now tells an agent to check `edit_availability` (`can_start_new_pass`, `can_apply`, `edit_window_ends_at`) from `video get-editable-content` before starting a new pass and again before calling `apply-revision` — a customer normally gets one revision round, and applying spends it.
+
+### Changed
+
+- Retired the "may not be deployed yet" explanation for a bare `404` on a Review & Fix, `apply-revision`, or generation operation. Main deployed the whole Video slice to production on 2026-08-31, so a bare `404` on any video operation now means an ordinary not-found, the same as everywhere else in the API. `video_capability_unavailable` and `video_provisioning_required` are unaffected — those are real, per-Team gates, not a deploy-status signal. Removed `VIDEO_OPERATIONS_PENDING_DEPLOY` and its special-case handling in `request()`.
+- `scripts/verify_package.py`'s Video guard now recognizes `videoReplaceWithMedia` as an ordinary edit-shaped staging write.
+
 ## [2.2.0] - 2026-08-28
 
 Ships as `@subscribrai/cli`. Adds the Subscribr Video Review & Fix surface — reads, staging writes, and publish — plus generation (quote/create/cancel) and a generic file-download convenience.
@@ -53,7 +68,8 @@ The first release under the `@subscribrai` scope.
 - Renamed the package from `@giltotherescue/subscribr-cli` to `@subscribrai/cli`. The command names `subscribr`, `subscribr-cli`, and `subscribr-install-skill` are unchanged.
 - Deprecated every version of `@giltotherescue/subscribr-cli` on npm, with a notice pointing at the new name.
 
-[Unreleased]: https://github.com/SubscribrAI/cli/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/SubscribrAI/cli/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/SubscribrAI/cli/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/SubscribrAI/cli/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/SubscribrAI/cli/releases/tag/v2.1.1
 [2.1.0]: https://www.npmjs.com/package/@subscribrai/cli/v/2.1.0
